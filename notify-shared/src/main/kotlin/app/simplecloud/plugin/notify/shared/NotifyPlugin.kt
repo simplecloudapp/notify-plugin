@@ -21,6 +21,8 @@ class NotifyPlugin(
     private val dateFormat = SimpleDateFormat(config.dateFormat)
     private val serverStateFilter = config.serverStateFilter
 
+    private val lastSentState: MutableMap<String, ServerState> = mutableMapOf()
+
     lateinit var listeningFunction: (message: Component, permission: String) -> Unit
 
     init {
@@ -29,16 +31,6 @@ class NotifyPlugin(
             System.getenv("CONTROLLER_PUBSUB_PORT").toInt(),
             AuthCallCredentials(System.getenv("CONTROLLER_SECRET"))
         )
-
-        pubSubClient.subscribe("event", ServerStartEvent::class.java) { event ->
-            val startingServer = event.serverOrNull ?: return@subscribe
-            handleUpdate(ServerState.STARTING, startingServer)
-        }
-
-        pubSubClient.subscribe("event", ServerStopEvent::class.java) { event ->
-            val stoppingServer = event.serverOrNull ?: return@subscribe
-            handleUpdate(ServerState.STOPPING, stoppingServer)
-        }
 
         pubSubClient.subscribe("event", ServerUpdateEvent::class.java) { event ->
             val serverAfter = event.serverAfterOrNull ?: return@subscribe
@@ -50,6 +42,11 @@ class NotifyPlugin(
     }
 
     private fun handleUpdate(serverState: ServerState, server: ServerDefinition) {
+        val serverKey = server.uniqueId
+
+        if (lastSentState[serverKey] == serverState) return
+        lastSentState[serverKey] = serverState
+
         val filter = serverStateFilter.filter { it.serverState == serverState }
         if (filter.isEmpty()) return
 
@@ -65,7 +62,9 @@ class NotifyPlugin(
         message: String
     ): Component {
         fun timeStampToLong(timeStamp: Timestamp): Long {
-            return ProtobufTimestamp.toLocalDateTime(timeStamp).toInstant(OffsetDateTime.now().offset)
+            return ProtobufTimestamp
+                .toLocalDateTime(timeStamp)
+                .toInstant(OffsetDateTime.now().offset)
                 .toEpochMilli()
         }
 
