@@ -1,6 +1,6 @@
 package app.simplecloud.plugin.notify.shared.config
 
-import build.buf.gen.simplecloud.controller.v1.ServerState
+import app.simplecloud.api.server.ServerState
 import org.spongepowered.configurate.objectmapping.ConfigSerializable
 import org.spongepowered.configurate.objectmapping.meta.Comment
 

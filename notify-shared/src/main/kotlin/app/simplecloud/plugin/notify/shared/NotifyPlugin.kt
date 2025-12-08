@@ -1,11 +1,10 @@
 package app.simplecloud.plugin.notify.shared
 
-import app.simplecloud.droplet.api.auth.AuthCallCredentials
-import app.simplecloud.droplet.api.time.ProtobufTimestamp
+import app.simplecloud.api.CloudApi
+import app.simplecloud.api.server.Server
+import app.simplecloud.api.server.ServerState
 import app.simplecloud.plugin.notify.shared.config.Config
 import app.simplecloud.plugin.notify.shared.config.ConfigFactory
-import app.simplecloud.pubsub.PubSubClient
-import build.buf.gen.simplecloud.controller.v1.*
 import com.google.protobuf.Timestamp
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
@@ -25,24 +24,23 @@ class NotifyPlugin(
 
     lateinit var listeningFunction: (message: Component, permission: String) -> Unit
 
+    private val cloudApi: CloudApi = CloudApi.create()
+
     init {
-        val pubSubClient = PubSubClient(
-            System.getenv("CONTROLLER_PUBSUB_HOST"),
-            System.getenv("CONTROLLER_PUBSUB_PORT").toInt(),
-            AuthCallCredentials(System.getenv("CONTROLLER_SECRET"))
-        )
+        cloudApi.event().server().onStateChanged { event ->
+            val serverAfter = event.server ?: return@onStateChanged
 
-        pubSubClient.subscribe("event", ServerUpdateEvent::class.java) { event ->
-            val serverAfter = event.serverAfterOrNull ?: return@subscribe
-            if (event.serverBeforeOrNull?.serverState == serverAfter.serverState) return@subscribe
+            if (event.server?.state == serverAfter.state) {
+                return@onStateChanged
+            }
 
-            val serverState = serverAfter.serverState
+            val serverState = serverAfter.state
             handleUpdate(serverState, serverAfter)
         }
     }
 
-    private fun handleUpdate(serverState: ServerState, server: ServerDefinition) {
-        val serverKey = server.uniqueId
+    private fun handleUpdate(serverState: ServerState, server: Server) {
+        val serverKey = server.serverId
 
         if (lastSentState[serverKey] == serverState) return
         lastSentState[serverKey] = serverState
@@ -56,35 +54,24 @@ class NotifyPlugin(
         }
     }
 
-    private fun generateMessage(
-        serverState: ServerState,
-        server: ServerDefinition,
-        message: String
-    ): Component {
-        fun timeStampToLong(timeStamp: Timestamp): Long {
-            return ProtobufTimestamp
-                .toLocalDateTime(timeStamp)
-                .toInstant(OffsetDateTime.now().offset)
-                .toEpochMilli()
-        }
-
+    private fun generateMessage(serverState: ServerState, server: Server, message: String): Component {
         return miniMessage(
             message,
-            Placeholder.parsed("server_ip", server.serverIp ?: "N/A"),
-            Placeholder.parsed("server_port", server.serverPort.toString()),
-            Placeholder.parsed("server_group", server.groupName ?: "N/A"),
+            Placeholder.parsed("server_ip", server.ip ?: "N/A"),
+            Placeholder.parsed("server_port", server.port.toString()),
+            Placeholder.parsed("server_group", server.group.name ?: "N/A"),
 
-            Placeholder.parsed("server_uuid", server.uniqueId),
+            Placeholder.parsed("server_uuid", server.serverId),
             Placeholder.parsed("server_id", server.numericalId.toString()),
 
             Placeholder.parsed(
                 "server_create_date",
-                dateFormat.format(timeStampToLong(server.createdAt))
+                dateFormat.format(server.createdAt)
             ),
 
             Placeholder.parsed(
                 "server_update_date",
-                dateFormat.format(timeStampToLong(server.updatedAt))
+                dateFormat.format(server.updatedAt)
             ),
 
             Placeholder.parsed("online_players", server.playerCount.toString()),

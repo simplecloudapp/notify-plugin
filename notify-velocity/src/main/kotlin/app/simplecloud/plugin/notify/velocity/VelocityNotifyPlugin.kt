@@ -22,18 +22,18 @@ import java.nio.file.Path
     ],
     url = "https://github.com/theSimpleCloud/notify-plugin"
 )
-class VelocityNotifyPlugin @Inject constructor(
-    @DataDirectory val dataDirectory: Path,
-    private val server: ProxyServer
-) {
+class VelocityNotifyPlugin @Inject constructor(@DataDirectory val dataDirectory: Path, private val server: ProxyServer) {
 
     @Subscribe
     fun onProxyInitialize(event: ProxyInitializeEvent) {
         val notifyPlugin = NotifyPlugin(dataDirectory)
 
         notifyPlugin.listeningFunction = { message, permission ->
+            server.sendMessage(message)
             server.allPlayers.forEach { onlinePlayer ->
-                if (permission.isEmpty() || onlinePlayer.hasPermission(permission)) onlinePlayer.sendMessage(message)
+                if (permission.isEmpty() || onlinePlayer.hasPermission(permission)) {
+                    onlinePlayer.sendMessage(message)
+                }
             }
         }
     }
