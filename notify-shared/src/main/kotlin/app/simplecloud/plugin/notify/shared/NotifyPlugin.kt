@@ -28,14 +28,12 @@ class NotifyPlugin(
 
     init {
         cloudApi.event().server().onStateChanged { event ->
-            val serverAfter = event.server ?: return@onStateChanged
-
-            if (event.server?.state == serverAfter.state) {
+            if (event.oldState == event.newState) {
                 return@onStateChanged
             }
 
-            val serverState = serverAfter.state
-            handleUpdate(serverState, serverAfter)
+            val serverState = event.newState
+            handleUpdate(serverState, event.server)
         }
     }
 
@@ -59,20 +57,21 @@ class NotifyPlugin(
             message,
             Placeholder.parsed("server_ip", server.ip ?: "N/A"),
             Placeholder.parsed("server_port", server.port.toString()),
-            Placeholder.parsed("server_group", server.group.name ?: "N/A"),
+            Placeholder.parsed("server_group", server.serverBase.name ?: "N/A"),
+            Placeholder.parsed("server_name", server.serverBase.name ?: "N/A"),
 
             Placeholder.parsed("server_uuid", server.serverId),
             Placeholder.parsed("server_id", server.numericalId.toString()),
 
-            Placeholder.parsed(
-                "server_create_date",
-                dateFormat.format(server.createdAt)
-            ),
-
-            Placeholder.parsed(
-                "server_update_date",
-                dateFormat.format(server.updatedAt)
-            ),
+//            Placeholder.parsed(
+//                "server_create_date",
+//                dateFormat.format(server.createdAt)
+//            ),
+//
+//            Placeholder.parsed(
+//                "server_update_date",
+//                dateFormat.format(server.updatedAt)
+//            ),
 
             Placeholder.parsed("online_players", server.playerCount.toString()),
             Placeholder.parsed("max_players", server.maxPlayers.toString()),
