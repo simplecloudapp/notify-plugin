@@ -15,7 +15,6 @@ allprojects {
 
     repositories {
         mavenCentral()
-
         maven("https://buf.build/gen/maven")
         maven("https://repo.simplecloud.app/snapshots")
         maven("https://repo.papermc.io/repository/maven-public/")
@@ -29,23 +28,15 @@ subprojects {
     repositories {
         mavenCentral()
         maven("https://buf.build/gen/maven")
-
-        maven {
-            name = "papermc"
-            url = uri("https://repo.papermc.io/repository/maven-public/")
+        maven("https://repo.papermc.io/repository/maven-public/")
+        maven("https://oss.sonatype.org/content/repositories/snapshots")
+        maven("https://repo.simplecloud.app/snapshots")
         }
-        maven {
-            url = uri("https://oss.sonatype.org/content/repositories/snapshots")
-        }
-        maven {
-            name = "simplecloudRepositorySnapshots"
-            url = uri("https://repo.simplecloud.app/snapshots")
-        }
-    }
 
     dependencies {
         testImplementation(rootProject.libs.kotlin.test)
-        compileOnly(rootProject.libs.kotlin.jvm)
+        implementation(rootProject.libs.kotlinx.coroutines.core)
+        implementation(rootProject.libs.kotlin.jvm)
     }
 
     java {
@@ -62,10 +53,6 @@ subprojects {
     tasks.named("shadowJar", ShadowJar::class) {
         mergeServiceFiles()
         archiveFileName.set("${project.name}.jar")
-
-        relocate("com.google.protobuf", "app.simplecloud.relocate.google.protobuf")
-        relocate("com.google.common", "app.simplecloud.relocate.google.common")
-        relocate("io.grpc", "app.simplecloud.relocate.io.grpc")
     }
 
     tasks.test {

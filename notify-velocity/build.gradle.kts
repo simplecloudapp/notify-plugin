@@ -3,13 +3,11 @@ plugins {
     alias(libs.plugins.minotaur)
 }
 
-apply(plugin = "kotlin-kapt")
-
 dependencies {
     api(project(":notify-shared"))
 
-    compileOnly(libs.velocity)
-    kapt("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
+    compileOnly(libs.velocity.api)
+    kapt(libs.velocity.api)
 }
 
 
@@ -38,6 +36,7 @@ modrinth {
         "1.21.8",
         "1.21.9",
         "1.21.10",
+        "1.21.11"
     )
     loaders.add("velocity")
     changelog.set("https://docs.simplecloud.app/changelog")

@@ -30,7 +30,7 @@ Keep your staff informed about server state changes with real-time notifications
 ## Features
 
 - [x] **Ingame Notifiction**: Get chat messages about server changes
-- [x] **Customize Messages**: Configurable messages ([minimessage](https://docs.advntr.dev/minimessage/index.html) supported)
+- [x] **Customize Messages**: Configurable messages ([minimessage](https://docs.papermc.io/adventure/minimessage/) supported)
 - [x] **Velocity & BungeeCord support**
 
 ## Configuration
@@ -104,9 +104,9 @@ This repository is licensed under [Apache 2.0][license].
 
 <!-- ✅ PLEASE EDIT -->
 [banner]: https://raw.githubusercontent.com/simplecloudapp/branding/refs/heads/main/readme/banner/plugin/notify.png
-[issue-bug-report]: https://github.com/theSimpleCloud/notify-plugin/issues/new?labels=bug&projects=template=01_BUG-REPORT.yml&title=%5BBUG%5D+%3Ctitle%3E
-[issue-feature-request]: https://github.com/theSimpleCloud/notify-plugin/discussions/new?category=ideas
-[docs-thisproject]: https://docs.simplecloud.app/plugin/notify
+[issue-bug-report]: https://github.com/simplecloudapp/notify-plugin/issues/new?labels=bug&projects=template=01_BUG-REPORT.yml&title=%5BBUG%5D+%3Ctitle%3E
+[issue-feature-request]: https://github.com/simplecloudapp/notify-plugin/discussions/new?category=ideas
+[docs-thisproject]: https://docs.simplecloud.app/en/manual/plugin/notify
 [docs-contribute]: https://docs.simplecloud.app/contribute
 
 [modrinth]: https://modrinth.com/plugin/notify-plugin

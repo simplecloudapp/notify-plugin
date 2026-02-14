@@ -5,20 +5,21 @@ import app.simplecloud.api.server.Server
 import app.simplecloud.api.server.ServerState
 import app.simplecloud.plugin.notify.shared.config.Config
 import app.simplecloud.plugin.notify.shared.config.ConfigFactory
-import com.google.protobuf.Timestamp
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
 import java.nio.file.Path
 import java.text.SimpleDateFormat
-import java.time.OffsetDateTime
 
 class NotifyPlugin(
     dataDirectory: Path
 ) {
 
-    private val config: Config = ConfigFactory.loadOrCreate(dataDirectory)
+    private var config: Config = ConfigFactory.loadOrCreate(dataDirectory) { newConfig ->
+        dateFormat.applyPattern(newConfig.dateFormat)
+        serverStateFilter = newConfig.serverStateFilter
+    }
     private val dateFormat = SimpleDateFormat(config.dateFormat)
-    private val serverStateFilter = config.serverStateFilter
+    private var serverStateFilter = config.serverStateFilter
 
     private val lastSentState: MutableMap<String, ServerState> = mutableMapOf()
 
@@ -53,26 +54,19 @@ class NotifyPlugin(
     }
 
     private fun generateMessage(serverState: ServerState, server: Server, message: String): Component {
+        val createdAt = runCatching { server.createdAt }.getOrNull()
+        val updatedAt = runCatching { server.updatedAt }.getOrNull()
+
         return miniMessage(
             message,
             Placeholder.parsed("server_ip", server.ip ?: "N/A"),
             Placeholder.parsed("server_port", server.port.toString()),
             Placeholder.parsed("server_group", server.serverBase.name ?: "N/A"),
             Placeholder.parsed("server_name", server.serverBase.name ?: "N/A"),
-
             Placeholder.parsed("server_uuid", server.serverId),
-            Placeholder.parsed("server_id", server.numericalId.toString()),
-
-//            Placeholder.parsed(
-//                "server_create_date",
-//                dateFormat.format(server.createdAt)
-//            ),
-//
-//            Placeholder.parsed(
-//                "server_update_date",
-//                dateFormat.format(server.updatedAt)
-//            ),
-
+            Placeholder.parsed("server_id", server.numericalId.takeIf { it != -1 }?.let { " $it" } ?: ""),
+            Placeholder.parsed("server_create_date", if (createdAt != null) dateFormat.format(createdAt) else "N/A"),
+            Placeholder.parsed("server_update_date", if (updatedAt != null) dateFormat.format(updatedAt) else "N/A"),
             Placeholder.parsed("online_players", server.playerCount.toString()),
             Placeholder.parsed("max_players", server.maxPlayers.toString()),
             Placeholder.parsed("server_state", serverState.name)

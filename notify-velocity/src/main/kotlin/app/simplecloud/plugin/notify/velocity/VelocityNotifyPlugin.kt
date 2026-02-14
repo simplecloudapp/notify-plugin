@@ -20,7 +20,7 @@ import java.nio.file.Path
             id = "simplecloud-api"
         )
     ],
-    url = "https://github.com/theSimpleCloud/notify-plugin"
+    url = "https://github.com/simplecloudapp/notify-plugin"
 )
 class VelocityNotifyPlugin @Inject constructor(@DataDirectory val dataDirectory: Path, private val server: ProxyServer) {
 

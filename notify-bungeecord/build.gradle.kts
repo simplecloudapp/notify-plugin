@@ -4,11 +4,10 @@ plugins {
 
 dependencies {
     api(project(":notify-shared"))
-    compileOnly(libs.bungeecord)
-    implementation("net.kyori:adventure-platform-bungeecord:4.3.4")
-
-    implementation("net.kyori:adventure-api:4.17.0")
-    implementation("net.kyori:adventure-text-minimessage:4.17.0")
+    compileOnly(libs.bungeecord.api)
+    implementation(libs.adventure.platform.bungeecord)
+    implementation(libs.adventure.api)
+    implementation(libs.adventure.text.minimessage)
 }
 
 modrinth {
@@ -36,6 +35,7 @@ modrinth {
         "1.21.8",
         "1.21.9",
         "1.21.10",
+        "1.21.11"
     )
     loaders.add("bungeecord")
     loaders.add("waterfall")
