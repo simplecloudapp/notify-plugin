@@ -9,9 +9,13 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
 import java.nio.file.Path
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.*
 
 class NotifyPlugin(
-    dataDirectory: Path
+    dataDirectory: Path,
 ) {
 
     private var config: Config = ConfigFactory.loadOrCreate(dataDirectory) { newConfig ->
@@ -26,6 +30,11 @@ class NotifyPlugin(
     lateinit var listeningFunction: (message: Component, permission: String) -> Unit
 
     private val cloudApi: CloudApi = CloudApi.create()
+
+    private val zone: ZoneId = ZoneId.systemDefault()
+    private val formatter: DateTimeFormatter =
+        DateTimeFormatter.ofPattern(config.dateFormat, Locale.getDefault())
+            .withZone(zone)
 
     init {
         cloudApi.event().server().onStateChanged { event ->
@@ -65,11 +74,26 @@ class NotifyPlugin(
             Placeholder.parsed("server_name", server.serverBase.name ?: "N/A"),
             Placeholder.parsed("server_uuid", server.serverId),
             Placeholder.parsed("server_id", server.numericalId.takeIf { it != -1 }?.let { " $it" } ?: ""),
-            Placeholder.parsed("server_create_date", if (createdAt != null) dateFormat.format(createdAt) else "N/A"),
-            Placeholder.parsed("server_update_date", if (updatedAt != null) dateFormat.format(updatedAt) else "N/A"),
+            Placeholder.parsed("server_create_date", formatTimestamp(runCatching { server.createdAt }.getOrNull())),
+            Placeholder.parsed("server_update_date", formatTimestamp(runCatching { server.updatedAt }.getOrNull())),
             Placeholder.parsed("online_players", server.playerCount.toString()),
             Placeholder.parsed("max_players", server.maxPlayers.toString()),
             Placeholder.parsed("server_state", serverState.name)
         )
     }
+
+    private fun formatTimestamp(value: Any?): String {
+        if (value == null) return "N/A"
+
+        val instant = when (value) {
+            is Instant -> value
+            is Date -> value.toInstant()
+            is Long -> Instant.ofEpochMilli(value)
+            is String -> runCatching { Instant.parse(value) }.getOrNull()
+            else -> null
+        } ?: return "N/A"
+
+        return formatter.format(instant)
+    }
+
 }
