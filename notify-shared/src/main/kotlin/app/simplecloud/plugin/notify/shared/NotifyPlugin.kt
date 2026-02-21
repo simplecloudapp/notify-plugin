@@ -63,9 +63,6 @@ class NotifyPlugin(
     }
 
     private fun generateMessage(serverState: ServerState, server: Server, message: String): Component {
-        val createdAt = runCatching { server.createdAt }.getOrNull()
-        val updatedAt = runCatching { server.updatedAt }.getOrNull()
-
         return miniMessage(
             message,
             Placeholder.parsed("server_ip", server.ip ?: "N/A"),
