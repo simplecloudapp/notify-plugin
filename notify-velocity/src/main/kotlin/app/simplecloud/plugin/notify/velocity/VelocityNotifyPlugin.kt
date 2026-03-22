@@ -29,7 +29,6 @@ class VelocityNotifyPlugin @Inject constructor(@DataDirectory val dataDirectory:
         val notifyPlugin = NotifyPlugin(dataDirectory)
 
         notifyPlugin.listeningFunction = { message, permission ->
-            server.sendMessage(message)
             server.allPlayers.forEach { onlinePlayer ->
                 if (permission.isEmpty() || onlinePlayer.hasPermission(permission)) {
                     onlinePlayer.sendMessage(message)
