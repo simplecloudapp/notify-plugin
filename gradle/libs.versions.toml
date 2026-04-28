@@ -6,7 +6,8 @@ shadow = "9.3.1"
 kapt = "2.1.20"
 minotaur = "2.8.10"
 
-simplecloud-api = "0.1.0-platform.19-dev.1770725947326-23f3f70"
+simplecloud-api = "0.1.0-platform.29-dev.1776936118022-c717659"
+simplecloud-plugin = "0.0.1"
 
 velocity = "3.5.0-SNAPSHOT"
 bungeecord-api = "1.21-R0.4"
@@ -22,6 +23,7 @@ kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotl
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 
 simplecloud-api = { module = "app.simplecloud.api:api", version.ref = "simplecloud-api" }
+simplecloud-plugin = { module = "app.simplecloud.plugin:plugin-shared", version.ref = "simplecloud-plugin" }
 
 velocity-api = { module = "com.velocitypowered:velocity-api", version.ref = "velocity" }
 bungeecord-api = { module = "net.md-5:bungeecord-api", version.ref = "bungeecord-api" }
