@@ -4,4 +4,6 @@ dependencies {
     compileOnly(libs.simplecloud.api)
     compileOnly(libs.adventure.api)
     compileOnly(libs.adventure.text.minimessage)
+
+    api(libs.cloud.core)
 }

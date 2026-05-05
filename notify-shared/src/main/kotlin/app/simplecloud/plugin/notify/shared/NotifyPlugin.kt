@@ -3,12 +3,15 @@ package app.simplecloud.plugin.notify.shared
 import app.simplecloud.api.CloudApi
 import app.simplecloud.api.server.Server
 import app.simplecloud.api.server.ServerState
-import app.simplecloud.plugin.notify.shared.config.Config
-import app.simplecloud.plugin.notify.shared.config.ConfigFactory
+import app.simplecloud.plugin.api.shared.config.ConfigurationFactory
+import app.simplecloud.plugin.api.shared.extension.text
+import app.simplecloud.plugin.notify.shared.config.MessageConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
 import java.nio.file.Path
-import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -17,13 +20,10 @@ import java.util.*
 class NotifyPlugin(
     dataDirectory: Path,
 ) {
-
-    private var config: Config = ConfigFactory.loadOrCreate(dataDirectory) { newConfig ->
-        dateFormat.applyPattern(newConfig.dateFormat)
-        serverStateFilter = newConfig.serverStateFilter
-    }
-    private val dateFormat = SimpleDateFormat(config.dateFormat)
-    private var serverStateFilter = config.serverStateFilter
+    val config = ConfigurationFactory(
+        dataDirectory.resolve("messages.yml").toFile(),
+        MessageConfig::class.java,
+    )
 
     private val lastSentState: MutableMap<String, ServerState> = mutableMapOf()
 
@@ -32,50 +32,124 @@ class NotifyPlugin(
     private val cloudApi: CloudApi = CloudApi.create()
 
     private val zone: ZoneId = ZoneId.systemDefault()
-    private val formatter: DateTimeFormatter =
-        DateTimeFormatter.ofPattern(config.dateFormat, Locale.getDefault())
-            .withZone(zone)
+    private val formatter: DateTimeFormatter
+
+    val scope = CoroutineScope(Dispatchers.IO)
 
     init {
+        val newConf = config.loadOrCreate(MessageConfig())
+        formatter = DateTimeFormatter.ofPattern(newConf.format.date, Locale.getDefault())
+            .withZone(zone)
+
         cloudApi.event().server().onStateChanged { event ->
             if (event.oldState == event.newState) {
                 return@onStateChanged
             }
 
             val serverState = event.newState
-            handleUpdate(serverState, event.server)
+            val server = event.server
+
+            scope.launch {
+                val serverKey = server.serverId
+
+                if (lastSentState[serverKey] == serverState) return@launch
+                lastSentState[serverKey] = serverState
+
+                var message = config.get().notifications.server?.getByState(serverState) ?: return@launch
+
+                message = replaceHover(message, group = false)
+
+                val parsed = generateMessageForServer(serverState, server, message)
+                val permission = "notify.state.server.${serverState.name.lowercase()}"
+
+                listeningFunction(parsed, permission)
+            }
+        }
+
+        cloudApi.event().server().onStopped { event ->
+            scope.launch {
+                var message = config.get().notifications.server?.stopped ?: return@launch
+
+                message = replaceHover(message, group = false)
+
+                val parsed = generateMessageForServerBase(
+                    event.server,
+                    message,
+                    Placeholder.parsed("state", "STOPPED")
+                )
+                val permission = "notify.state.server.deleted"
+
+                listeningFunction(parsed, permission)
+            }
+        }
+
+        cloudApi.event().group().onCreated { event ->
+            val group = event.group
+
+            scope.launch {
+                var message = config.get().notifications.group?.created ?: return@launch
+
+                message = replaceHover(message, group = true)
+
+                val parsed = text(
+                    message,
+                    Placeholder.parsed("group", group.name ?: "N/A"),
+                    Placeholder.parsed("time", formatTimestamp(Instant.now()))
+                )
+                val permission = "notify.state.group.created"
+
+                listeningFunction(parsed, permission)
+            }
+        }
+
+        cloudApi.event().group().onDeleted { event ->
+            scope.launch {
+                var message = config.get().notifications.group?.deleted ?: return@launch
+
+                message = replaceHover(message, group = true)
+
+                val parsed = text(
+                    message,
+                    Placeholder.parsed("group", event.name ?: "N/A"),
+                    Placeholder.parsed("time", formatTimestamp(Instant.now()))
+                )
+                val permission = "notify.state.group.deleted"
+
+                listeningFunction(parsed, permission)
+            }
         }
     }
 
-    private fun handleUpdate(serverState: ServerState, server: Server) {
-        val serverKey = server.serverId
+    private fun replaceHover(message: String, group: Boolean): String {
+        val placeholderName = if (group) "notifications.hover.group" else "notifications.hover.server"
+        val hoverMessage = if (group) config.get().notifications.hover.group else config.get().notifications.hover.server
 
-        if (lastSentState[serverKey] == serverState) return
-        lastSentState[serverKey] = serverState
-
-        val filter = serverStateFilter.filter { it.serverState == serverState }
-        if (filter.isEmpty()) return
-
-        filter.forEach {
-            val message = generateMessage(serverState, server, it.message)
-            listeningFunction(message, it.permission)
-        }
+        return message.replace("<hover:show_text:'<$placeholderName>'>", "<hover:show_text:'${text(hoverMessage)}'>")
     }
 
-    private fun generateMessage(serverState: ServerState, server: Server, message: String): Component {
-        return miniMessage(
+    private fun generateMessageForServer(serverState: ServerState, server: Server, message: String): Component {
+        return generateMessageForServerBase(
+            server,
             message,
-            Placeholder.parsed("server_ip", server.ip ?: "N/A"),
-            Placeholder.parsed("server_port", server.port.toString()),
-            Placeholder.parsed("server_group", server.serverBase.name ?: "N/A"),
-            Placeholder.parsed("server_name", server.serverBase.name ?: "N/A"),
-            Placeholder.parsed("server_uuid", server.serverId),
-            Placeholder.parsed("server_id", server.numericalId.takeIf { it != -1 }?.let { " $it" } ?: ""),
-            Placeholder.parsed("server_create_date", formatTimestamp(runCatching { server.createdAt }.getOrNull())),
-            Placeholder.parsed("server_update_date", formatTimestamp(runCatching { server.updatedAt }.getOrNull())),
-            Placeholder.parsed("online_players", server.playerCount.toString()),
-            Placeholder.parsed("max_players", server.maxPlayers.toString()),
-            Placeholder.parsed("server_state", serverState.name)
+            Placeholder.parsed("state", serverState.name)
+        )
+    }
+
+    private fun generateMessageForServerBase(server: Server, message: String, vararg tagResolver: net.kyori.adventure.text.minimessage.tag.resolver.TagResolver): Component {
+        return text(
+            message,
+            Placeholder.parsed("ip", server.ip ?: "N/A"),
+            Placeholder.parsed("port", server.port.toString()),
+            Placeholder.parsed("group", server.serverBase.name ?: "N/A"),
+            Placeholder.parsed("server", server.serverBase.name ?: "N/A"),
+            Placeholder.parsed("uuid", server.serverId),
+            Placeholder.parsed("id", server.numericalId.takeIf { it != -1 }?.let { " $it" } ?: ""),
+            Placeholder.parsed("create_date", formatTimestamp(runCatching { server.createdAt }.getOrNull())),
+            Placeholder.parsed("time", formatTimestamp(Instant.now())),
+            Placeholder.parsed("updated", formatTimestamp(runCatching { server.updatedAt }.getOrNull())),
+            Placeholder.parsed("players", server.playerCount.toString()),
+            Placeholder.parsed("max", server.maxPlayers.toString()),
+                *tagResolver
         )
     }
 

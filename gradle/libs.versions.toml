@@ -7,7 +7,7 @@ kapt = "2.1.20"
 minotaur = "2.8.10"
 
 simplecloud-api = "0.1.0-platform.29-dev.1776936118022-c717659"
-simplecloud-plugin = "0.0.1"
+simplecloud-plugin = "0.0.1-platform.1776615774559-382b07e"
 
 velocity = "3.5.0-SNAPSHOT"
 bungeecord-api = "1.21-R0.4"
@@ -16,6 +16,10 @@ adventure-api = "4.26.1"
 adventure-platform-bungeecord = "4.4.1"
 
 configurate = "4.2.0"
+
+cloud-core = "2.0.0"
+cloud-velocity = "2.0.0-beta.10"
+cloud-bungeecord = "2.0.0-beta.10"
 
 [libraries]
 kotlin-jvm = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
@@ -34,6 +38,10 @@ adventure-text-minimessage = { module = "net.kyori:adventure-text-minimessage", 
 
 configurate-yaml = { module = "org.spongepowered:configurate-yaml", version.ref = "configurate" }
 configurate-kotlin = { module = "org.spongepowered:configurate-extra-kotlin", version.ref = "configurate" }
+
+cloud-core = { module = "org.incendo:cloud-core", version.ref = "cloud-core" }
+cloud-velocity = { module = "org.incendo:cloud-velocity", version.ref = "cloud-velocity" }
+cloud-bungeecord = { module = "org.incendo:cloud-bungee", version.ref = "cloud-bungeecord" }
 
 [bundles]
 configurate = ["configurate-kotlin", "configurate-yaml"]

@@ -8,6 +8,8 @@ dependencies {
 
     compileOnly(libs.velocity.api)
     kapt(libs.velocity.api)
+
+    implementation(libs.cloud.velocity)
 }
 
 
