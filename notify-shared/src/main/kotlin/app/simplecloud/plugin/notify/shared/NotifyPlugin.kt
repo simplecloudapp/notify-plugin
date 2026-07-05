@@ -4,13 +4,13 @@ import app.simplecloud.api.CloudApi
 import app.simplecloud.api.server.Server
 import app.simplecloud.api.server.ServerState
 import app.simplecloud.plugin.api.shared.config.ConfigurationFactory
-import app.simplecloud.plugin.api.shared.extension.text
 import app.simplecloud.plugin.notify.shared.config.MessageConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
 import java.nio.file.Path
 import java.time.Instant
 import java.time.ZoneId
@@ -91,7 +91,7 @@ class NotifyPlugin(
 
                 message = replaceHover(message, group = true)
 
-                val parsed = text(
+                val parsed = parseMessage(
                     message,
                     Placeholder.parsed("group", group.name ?: "N/A"),
                     Placeholder.parsed("time", formatTimestamp(Instant.now()))
@@ -108,7 +108,7 @@ class NotifyPlugin(
 
                 message = replaceHover(message, group = true)
 
-                val parsed = text(
+                val parsed = parseMessage(
                     message,
                     Placeholder.parsed("group", event.name ?: "N/A"),
                     Placeholder.parsed("time", formatTimestamp(Instant.now()))
@@ -124,7 +124,7 @@ class NotifyPlugin(
         val placeholderName = if (group) "notifications.hover.group" else "notifications.hover.server"
         val hoverMessage = if (group) config.get().notifications.hover.group else config.get().notifications.hover.server
 
-        return message.replace("<hover:show_text:'<$placeholderName>'>", "<hover:show_text:'${text(hoverMessage)}'>")
+        return message.replace("<hover:show_text:'<$placeholderName>'>", "<hover:show_text:'$hoverMessage'>")
     }
 
     private fun generateMessageForServer(serverState: ServerState, server: Server, message: String): Component {
@@ -135,8 +135,8 @@ class NotifyPlugin(
         )
     }
 
-    private fun generateMessageForServerBase(server: Server, message: String, vararg tagResolver: net.kyori.adventure.text.minimessage.tag.resolver.TagResolver): Component {
-        return text(
+    private fun generateMessageForServerBase(server: Server, message: String, vararg tagResolver: TagResolver): Component {
+        return parseMessage(
             message,
             Placeholder.parsed("ip", server.ip ?: "N/A"),
             Placeholder.parsed("port", server.port.toString()),
@@ -149,8 +149,12 @@ class NotifyPlugin(
             Placeholder.parsed("updated", formatTimestamp(runCatching { server.updatedAt }.getOrNull())),
             Placeholder.parsed("players", server.playerCount.toString()),
             Placeholder.parsed("max", server.maxPlayers.toString()),
-                *tagResolver
+            *tagResolver
         )
+    }
+
+    private fun parseMessage(message: String, vararg tagResolver: TagResolver): Component {
+        return config.get().msg(message, *tagResolver)
     }
 
     private fun formatTimestamp(value: Any?): String {
