@@ -1,9 +1,11 @@
 package app.simplecloud.plugin.notify.velocity
 
+import app.simplecloud.plugin.notify.shared.CloudSender
 import app.simplecloud.plugin.notify.shared.NotifyPlugin
 import com.google.inject.Inject
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
+import com.velocitypowered.api.event.proxy.ProxyShutdownEvent
 import com.velocitypowered.api.plugin.Dependency
 import com.velocitypowered.api.plugin.Plugin
 import com.velocitypowered.api.plugin.annotation.DataDirectory
@@ -22,19 +24,26 @@ import java.nio.file.Path
     ],
     url = "https://github.com/simplecloudapp/notify-plugin"
 )
-class VelocityNotifyPlugin @Inject constructor(@DataDirectory val dataDirectory: Path, private val server: ProxyServer) {
+class VelocityNotifyPlugin @Inject constructor(
+    @param:DataDirectory private val dataDirectory: Path,
+    private val server: ProxyServer,
+) {
+
+    private var notifyPlugin: NotifyPlugin? = null
 
     @Subscribe
     fun onProxyInitialize(event: ProxyInitializeEvent) {
-        val notifyPlugin = NotifyPlugin(dataDirectory)
+        notifyPlugin = NotifyPlugin(dataDirectory, ::onlinePlayers)
+    }
 
-        notifyPlugin.listeningFunction = { message, permission ->
-            server.allPlayers.forEach { onlinePlayer ->
-                if (permission.isEmpty() || onlinePlayer.hasPermission(permission)) {
-                    onlinePlayer.sendMessage(message)
-                }
-            }
-        }
+    @Subscribe
+    fun onProxyShutdown(event: ProxyShutdownEvent) {
+        notifyPlugin?.close()
+        notifyPlugin = null
+    }
+
+    private fun onlinePlayers(): Iterable<CloudSender> {
+        return server.allPlayers.map(::VelocityCloudSender)
     }
 
 }

@@ -7,6 +7,8 @@ import app.simplecloud.plugin.api.shared.config.ConfigurationFactory
 import app.simplecloud.plugin.notify.shared.config.MessageConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
@@ -16,25 +18,36 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 class NotifyPlugin(
     dataDirectory: Path,
+    private val recipients: () -> Iterable<CloudSender>,
 ) {
+    private val serverHoverPlaceholder = "notifications.hover.server"
+    private val groupHoverPlaceholder = "notifications.hover.group"
+
+    private val serverStatePermissionPrefix = "notify.state.server"
+    private val serverStoppedPermission = "$serverStatePermissionPrefix.stopped"
+    private val legacyServerStoppedPermission = "$serverStatePermissionPrefix.deleted"
+    private val serverStoppedPermissions = setOf(serverStoppedPermission, legacyServerStoppedPermission)
+
+    private val groupCreatedPermission = "notify.state.group.created"
+    private val groupDeletedPermission = "notify.state.group.deleted"
+
     val config = ConfigurationFactory(
         dataDirectory.resolve("messages.yml").toFile(),
         MessageConfig::class.java,
     )
 
-    private val lastSentState: MutableMap<String, ServerState> = mutableMapOf()
-
-    lateinit var listeningFunction: (message: Component, permission: String) -> Unit
+    private val lastSentState: MutableMap<String, ServerState> = ConcurrentHashMap()
 
     private val cloudApi: CloudApi = CloudApi.create()
 
     private val zone: ZoneId = ZoneId.systemDefault()
     private val formatter: DateTimeFormatter
 
-    val scope = CoroutineScope(Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
         val newConf = config.loadOrCreate(MessageConfig())
@@ -50,36 +63,29 @@ class NotifyPlugin(
             val server = event.server
 
             scope.launch {
-                val serverKey = server.serverId
+                val message = config.get().notifications.server?.getByState(serverState) ?: return@launch
 
-                if (lastSentState[serverKey] == serverState) return@launch
-                lastSentState[serverKey] = serverState
+                if (!markStateSent(server, serverState)) return@launch
 
-                var message = config.get().notifications.server?.getByState(serverState) ?: return@launch
-
-                message = replaceHover(message, group = false)
-
-                val parsed = generateMessageForServer(serverState, server, message)
-                val permission = "notify.state.server.${serverState.name.lowercase()}"
-
-                listeningFunction(parsed, permission)
+                sendServerNotification(
+                    server,
+                    message,
+                    setOf(serverStatePermission(serverState)),
+                    Placeholder.parsed("state", serverState.name)
+                )
             }
         }
 
         cloudApi.event().server().onStopped { event ->
             scope.launch {
-                var message = config.get().notifications.server?.stopped ?: return@launch
+                val message = config.get().notifications.server?.stopped ?: return@launch
 
-                message = replaceHover(message, group = false)
-
-                val parsed = generateMessageForServerBase(
+                sendServerNotification(
                     event.server,
                     message,
+                    serverStoppedPermissions,
                     Placeholder.parsed("state", "STOPPED")
                 )
-                val permission = "notify.state.server.deleted"
-
-                listeningFunction(parsed, permission)
             }
         }
 
@@ -87,55 +93,90 @@ class NotifyPlugin(
             val group = event.group
 
             scope.launch {
-                var message = config.get().notifications.group?.created ?: return@launch
+                val message = config.get().notifications.group?.created ?: return@launch
 
-                message = replaceHover(message, group = true)
-
-                val parsed = parseMessage(
+                sendGroupNotification(
                     message,
-                    Placeholder.parsed("group", group.name ?: "N/A"),
-                    Placeholder.parsed("time", formatTimestamp(Instant.now()))
+                    group.name,
+                    groupCreatedPermission
                 )
-                val permission = "notify.state.group.created"
-
-                listeningFunction(parsed, permission)
             }
         }
 
         cloudApi.event().group().onDeleted { event ->
             scope.launch {
-                var message = config.get().notifications.group?.deleted ?: return@launch
+                val message = config.get().notifications.group?.deleted ?: return@launch
 
-                message = replaceHover(message, group = true)
-
-                val parsed = parseMessage(
+                sendGroupNotification(
                     message,
-                    Placeholder.parsed("group", event.name ?: "N/A"),
-                    Placeholder.parsed("time", formatTimestamp(Instant.now()))
+                    event.name,
+                    groupDeletedPermission
                 )
-                val permission = "notify.state.group.deleted"
-
-                listeningFunction(parsed, permission)
             }
         }
     }
 
-    private fun replaceHover(message: String, group: Boolean): String {
-        val placeholderName = if (group) "notifications.hover.group" else "notifications.hover.server"
-        val hoverMessage = if (group) config.get().notifications.hover.group else config.get().notifications.hover.server
-
-        return message.replace("<hover:show_text:'<$placeholderName>'>", "<hover:show_text:'$hoverMessage'>")
+    fun close() {
+        scope.cancel()
     }
 
-    private fun generateMessageForServer(serverState: ServerState, server: Server, message: String): Component {
-        return generateMessageForServerBase(
+    private fun markStateSent(server: Server, serverState: ServerState): Boolean {
+        return lastSentState.put(server.serverId, serverState) != serverState
+    }
+
+    private fun sendServerNotification(
+        server: Server,
+        message: String,
+        permissions: Set<String>,
+        vararg tagResolver: TagResolver,
+    ) {
+        val parsed = parseServerMessage(
             server,
+            replaceServerHover(message),
+            *tagResolver
+        )
+
+        broadcast(Notification(parsed, permissions))
+    }
+
+    private fun sendGroupNotification(message: String, groupName: String?, permission: String) {
+        val parsed = parseMessage(
+            replaceGroupHover(message),
+            Placeholder.parsed("group", groupName ?: "N/A"),
+            Placeholder.parsed("time", formatTimestamp(Instant.now()))
+        )
+
+        broadcast(Notification(parsed, permission))
+    }
+
+    private fun broadcast(notification: Notification) {
+        recipients().forEach(notification::sendTo)
+    }
+
+    private fun replaceServerHover(message: String): String {
+        return replaceHover(
             message,
-            Placeholder.parsed("state", serverState.name)
+            serverHoverPlaceholder,
+            config.get().notifications.hover.server
         )
     }
 
-    private fun generateMessageForServerBase(server: Server, message: String, vararg tagResolver: TagResolver): Component {
+    private fun replaceGroupHover(message: String): String {
+        return replaceHover(
+            message,
+            groupHoverPlaceholder,
+            config.get().notifications.hover.group
+        )
+    }
+
+    private fun replaceHover(message: String, placeholder: String, hoverMessage: String): String {
+        return message.replace(
+            "<hover:show_text:'<$placeholder>'>",
+            "<hover:show_text:'$hoverMessage'>"
+        )
+    }
+
+    private fun parseServerMessage(server: Server, message: String, vararg tagResolver: TagResolver): Component {
         return parseMessage(
             message,
             Placeholder.parsed("ip", server.ip ?: "N/A"),
@@ -169,6 +210,10 @@ class NotifyPlugin(
         } ?: return "N/A"
 
         return formatter.format(instant)
+    }
+
+    private fun serverStatePermission(state: ServerState): String {
+        return "$serverStatePermissionPrefix.${state.name.lowercase()}"
     }
 
 }
