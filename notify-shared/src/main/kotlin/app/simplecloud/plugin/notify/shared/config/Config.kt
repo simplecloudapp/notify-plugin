@@ -19,7 +19,7 @@ data class MessageConfig(
     @Setting("notifications")
     val notifications: Notifications = Notifications(),
 
-    override val variables: Map<String, String> = mapOf(
+    public override val variables: Map<String, String> = mapOf(
         "prefix" to "<color:#0EA5E9><bold>⚡</bold></color>"
     ),
 ) : AbstractMessageConfig()
