@@ -5,13 +5,10 @@ plugins {
 
 dependencies {
     api(project(":notify-shared"))
-
     compileOnly(libs.velocity.api)
     kapt(libs.velocity.api)
-
     implementation(libs.cloud.velocity)
 }
-
 
 modrinth {
     token.set(project.findProperty("modrinthToken") as String? ?: System.getenv("MODRINTH_TOKEN"))
