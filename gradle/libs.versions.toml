@@ -4,6 +4,7 @@ kotlinx-coroutines = "1.11.0"
 
 shadow = "9.5.1"
 minotaur = "2.9.0"
+blossom = "2.2.0"
 
 simplecloud-api = "0.1.0-platform.40"
 simplecloud-plugin = "0.0.1-platform.1778966459069-b1e45e2"
@@ -48,3 +49,4 @@ configurate = ["configurate-kotlin", "configurate-yaml"]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 minotaur = { id = "com.modrinth.minotaur", version.ref = "minotaur" }
+blossom = { id = "net.kyori.blossom", version.ref = "blossom" }

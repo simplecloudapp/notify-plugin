@@ -8,7 +8,7 @@ plugins {
 
 allprojects {
     group = "app.simplecloud.plugin"
-    version = "0.0.6"
+    version = "1.0.0"
 
     repositories {
         mavenCentral()
@@ -57,6 +57,14 @@ subprojects {
     tasks.shadowJar {
         mergeServiceFiles()
         archiveFileName.set("${project.name}.jar")
+    }
+
+    tasks.processResources {
+        filesMatching("plugin.yml") {
+            expand(
+                "version" to project.version
+            )
+        }
     }
 
 }

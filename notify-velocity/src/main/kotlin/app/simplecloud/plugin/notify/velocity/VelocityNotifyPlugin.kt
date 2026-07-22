@@ -20,14 +20,13 @@ import java.nio.file.Path
 @Plugin(
     id = "notify-velocity",
     name = "notify-velocity",
-    version = "1.0-SNAPSHOT",
+    version = BuildConstants.VERSION,
     authors = ["rlqu"],
+    description = "An ingame plugin that notifies about v3 server changes",
+    url = "https://github.com/simplecloudapp/notify-plugin",
     dependencies = [
-        Dependency(
-            id = "simplecloud-api"
-        )
-    ],
-    url = "https://github.com/simplecloudapp/notify-plugin"
+        Dependency("simplecloud-api")
+    ]
 )
 class VelocityNotifyPlugin @Inject constructor(
     @param:DataDirectory private val dataDirectory: Path,
