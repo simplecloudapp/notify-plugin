@@ -1,5 +1,6 @@
-package app.simplecloud.plugin.notify.shared
+package app.simplecloud.plugin.notify.shared.notification
 
+import app.simplecloud.plugin.notify.shared.command.CloudSender
 import net.kyori.adventure.text.Component
 
 class Notification(

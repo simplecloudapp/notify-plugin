@@ -3,11 +3,12 @@ package app.simplecloud.plugin.notify.shared.config
 import app.simplecloud.api.server.ServerState
 import app.simplecloud.plugin.api.shared.config.AbstractMessageConfig
 import app.simplecloud.plugin.api.shared.config.VersionedConfig
+import app.simplecloud.plugin.notify.shared.utilities.ConfigVersion
 import org.spongepowered.configurate.objectmapping.ConfigSerializable
 
 @ConfigSerializable
 data class MessageConfig(
-    override val version: Int = 1,
+    override val version: Int = ConfigVersion.VERSION,
     val format: Format = Format(),
     val command: Command = Command(),
     val notifications: Notifications = Notifications(),
@@ -82,6 +83,7 @@ data class ReloadConfig(
 data class Error(
     val playerNotFound: String = "<prefix> <#DC2626>Player <#F8FAFC><playername> <#DC2626>was not found.",
     val playerNotOnline: String = "<prefix> <#DC2626>Player <#F8FAFC><playername> <#DC2626>is not online.",
+    val onlyPlayers: String = "<prefix> <#DC2626>This command can only be used by players.",
     val storageUnavailable: String = "<prefix> <#DC2626>Notify settings are currently unavailable.",
     val internal: String = "<prefix> <#DC2626>An internal error occurred. Try again later."
 )
