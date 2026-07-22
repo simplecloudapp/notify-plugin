@@ -18,8 +18,8 @@ import org.incendo.cloud.velocity.VelocityCommandManager
 import java.nio.file.Path
 
 @Plugin(
-    id = "notify-velocity",
-    name = "notify-velocity",
+    id = "simplecloud-notify",
+    name = "simplecloud-notify",
     version = BuildConstants.VERSION,
     authors = ["rlqu"],
     description = "An ingame plugin that notifies about v3 server changes",

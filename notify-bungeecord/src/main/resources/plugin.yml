@@ -1,4 +1,4 @@
-name: notify-bungeecord
+name: simplecloud-notify
 version: ${version}
 author: rlqu
 main: app.simplecloud.plugin.notify.bungeecord.BungeeCordNotifyPlugin
