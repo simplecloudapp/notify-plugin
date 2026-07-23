@@ -10,9 +10,9 @@ import org.spongepowered.configurate.objectmapping.ConfigSerializable
 data class MessageConfig(
     override val version: Int = ConfigVersion.VERSION,
     val format: Format = Format(),
+    public override val variables: Map<String, String> = mapOf("prefix" to "<color:#0EA5E9><bold>⚡</bold></color>"),
     val command: Command = Command(),
     val notifications: Notifications = Notifications(),
-    public override val variables: Map<String, String> = mapOf("prefix" to "<color:#0EA5E9><bold>⚡</bold></color>"),
 ) : VersionedConfig, AbstractMessageConfig()
 
 @ConfigSerializable
