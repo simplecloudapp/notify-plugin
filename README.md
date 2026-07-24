@@ -37,60 +37,90 @@ Keep your staff informed about server state changes with real-time notifications
 
 Here you can see the configuration file for the plugin. All possible options are explained in the comments.
 ```yaml
-# The date format pattern the notify plugin uses.
-# For more information, see the official Java documentation: https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/text/SimpleDateFormat.html
-date-format: dd.MM.yyyy HH:mm:ss
+version: 1
 
-# Filter server states to notify about.
-server-state-filter:
-    # server-state obviously sets the server state to filter for
--   server-state: STARTING
-    # The message that is being sent to the permitted players goes here. 
-    # Don't get irritated by the |- format, it's just a multiline string. You can also pass oneliners.
-    # Possible placeholders you can use here are:
-    # - <server_group>: The group name the server belongs to
-    # - <server_id>: The numerical id of the server
-    # - <server_uuid>: The UUID of the server
-    # - <server_state>: The state of the server after the update
-    # - <server_ip>: The IP that the server is running on
-    # - <server_port>: The port that the server is bound to
-    # - <online_players>: The amount of players currently online on the server
-    # - <max_players>: The maximum amount of players that can join the server
-    # - <server_update_date>: The date of the last update of the server
-    # - <server_create_date>: The date of the initial update (creation) of the server
-    message: |-
-        <color:#38bdf8><bold>⚡</bold></color> <hover:show_text:'<color:#38bdf8><bold>⚡</bold></color> Information of <server_group> <server_id>
-           <color:#a3a3a3>Timestamp:</color> <color:#38bdf8><server_update_date></color>
-           <color:#a3a3a3>State:</color> <color:#38bdf8><server_state></color>
-           <color:#a3a3a3>Server-IP:</color> <color:#38bdf8><server_ip></color>
-           <color:#a3a3a3>Port:</color> <color:#38bdf8><server_port></color>
-           <color:#a3a3a3>Players:</color> <color:#38bdf8><online_players>/<max_players></color>'><color:white>Server <server_group> <server_id></hover> updated its state to <color:#fbbf24><server_state></color>.
-    # Users will need this permission to receive the message. Leave it empty (just '') to allow everyone to receive it.
-    permission: notify.receive.state-changed.starting
-    
-    # You can add more server states to filter like this:
--   server-state: AVAILABLE
-    # To design your own messages, we recommend using the minimessage web-ui: https://webui.advntr.dev/
-    message: |-
-        <color:#38bdf8><bold>⚡</bold></color> <hover:show_text:'<color:#38bdf8><bold>⚡</bold></color> Information of <server_group> <server_id>
-           <color:#a3a3a3>Timestamp:</color> <color:#38bdf8><server_update_date></color>
-           <color:#a3a3a3>State:</color> <color:#38bdf8><server_state></color>
-           <color:#a3a3a3>Server-IP:</color> <color:#38bdf8><server_ip></color>
-           <color:#a3a3a3>Port:</color> <color:#38bdf8><server_port></color>
-           <color:#a3a3a3>Players:</color> <color:#38bdf8><online_players>/<max_players></color>'><color:white>Server <server_group> <server_id></hover> updated its state to <color:#fbbf24><server_state></color>.
-    # The default permission is notify.receive.state-changed.[server-state]
-    permission: notify.receive.state-changed.available
-    
--   server-state: STOPPING
-    message: |-
-        <color:#38bdf8><bold>⚡</bold></color> <hover:show_text:'<color:#38bdf8><bold>⚡</bold></color> Information of <server_group> <server_id>
-           <color:#a3a3a3>Timestamp:</color> <color:#38bdf8><server_update_date></color>
-           <color:#a3a3a3>State:</color> <color:#38bdf8><server_state></color>
-           <color:#a3a3a3>Server-IP:</color> <color:#38bdf8><server_ip></color>
-           <color:#a3a3a3>Port:</color> <color:#38bdf8><server_port></color>
-           <color:#a3a3a3>Players:</color> <color:#38bdf8><online_players>/<max_players></color>'><color:white>Server <server_group> <server_id></hover> updated its state to <color:#fbbf24><server_state></color>.
-    # Here you can see that everyone will receive the message, as the permission is empty.
-    permission: ''
+# ───────────────────────────────────────────────────────────────────────────────
+# Format Settings
+# ───────────────────────────────────────────────────────────────────────────────
+format:
+    date: "dd.MM.yyyy HH:mm:ss"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# Variables
+# Reusable variables that can be used throughout the messages.
+# Usage: <variable_name> will be replaced with the defined value.
+# ───────────────────────────────────────────────────────────────────────────────
+variables:
+    prefix: "<color:#0EA5E9><bold>⚡</bold></color>"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# Command Messages
+# ───────────────────────────────────────────────────────────────────────────────
+command:
+    help:
+        title: "<prefix> <#0EA5E9>SimpleCloud Notify commands"
+        entry: "<#E2E8F0><command>"
+        empty: "<prefix> <#F59E0B>No notify commands are available for you."
+
+    usage:
+        invalid: "<prefix> <#DC2626>Use <#F8FAFC><command> <#DC2626>instead."
+        entry: "<#E2E8F0><command>"
+        invalid-state: "<prefix> <#DC2626>Use <#F8FAFC>enable <#DC2626>or <#F8FAFC>disable<#DC2626>."
+        invalid-toggle-value: "<prefix> <#DC2626>Use <#F8FAFC>true <#DC2626>or <#F8FAFC>false<#DC2626>."
+        missing-player: "<prefix> <#DC2626>Missing player <#F8FAFC><playername><#DC2626>."
+
+    permission:
+        denied: "<prefix> <#DC2626>You do not have permission to use this command."
+
+    notify:
+        enabled: "<prefix> <#A3E635>Server notifications are now <#F8FAFC>enabled<#A3E635>."
+        disabled: "<prefix> <#A3E635>Server notifications are now <#F8FAFC>disabled<#A3E635>."
+        already-enabled: "<prefix> <#F59E0B>Server notifications are already <#F8FAFC>enabled<#F59E0B>."
+        already-disabled: "<prefix> <#F59E0B>Server notifications are already <#F8FAFC>disabled<#F59E0B>."
+
+    set:
+        enabled: "<prefix> <#A3E635>Server notifications are now <#F8FAFC>enabled <#A3E635>for <white><head:<playername>:true> <#F8FAFC><displayname><#A3E635>."
+        disabled: "<prefix> <#A3E635>Server notifications are now <#F8FAFC>disabled <#A3E635>for <white><head:<playername>:true> <#F8FAFC><displayname><#A3E635>."
+        already-enabled: "<prefix> <#F59E0B>Server notifications are already <#F8FAFC>enabled <#F59E0B>for <white><head:<playername>:true> <#F8FAFC><displayname><#F59E0B>."
+        already-disabled: "<prefix> <#F59E0B>Server notifications are already <#F8FAFC>disabled <#F59E0B>for <white><head:<playername>:true> <#F8FAFC><displayname><#F59E0B>."
+
+    reload:
+        config:
+            success: "<prefix> <#A3E635>Notify configuration was reloaded."
+            failed: "<prefix> <#DC2626>Notify configuration could not be reloaded."
+
+    error:
+        player-not-found: "<prefix> <#DC2626>Player <#F8FAFC><playername> <#DC2626>was not found."
+        player-not-online: "<prefix> <#DC2626>Player <#F8FAFC><playername> <#DC2626>is not online."
+        only-players: "<prefix> <#DC2626>This command can only be used by players."
+        storage-unavailable: "<prefix> <#DC2626>Notify settings are currently unavailable."
+        internal: "<prefix> <#DC2626>An internal error occurred. Try again later."
+
+# ───────────────────────────────────────────────────────────────────────────────
+# Notifications
+# Notification messages for different server and group states.
+#
+# NOTE: If you delete a state entry, the corresponding notification will not be sent.
+# ───────────────────────────────────────────────────────────────────────────────
+notifications:
+    hover:
+        server: |-
+            <#E2E8F0>Server information
+            <br><#94A3B8>Time<#475569>: <#E2E8F0><time>
+            <br><#94A3B8>State<#475569>: <#E2E8F0><state>
+            <br><#94A3B8>Address<#475569>: <#E2E8F0><ip>:<port>
+            <br><#94A3B8>Players<#475569>: <#E2E8F0><players>/<max>
+        group: |-
+            <#E2E8F0>Group information
+            <br><#94A3B8>Time<#475569>: <#E2E8F0><time>
+    server:
+        starting: "<prefix> <#0EA5E9>Server <hover:show_text:'<notifications.hover.server>'><#F8FAFC><server></hover> <#0EA5E9>is now <#F8FAFC>starting<#0EA5E9>."
+        available: "<prefix> <#A3E635>Server <hover:show_text:'<notifications.hover.server>'><#F8FAFC><server></hover> <#A3E635>is now <#F8FAFC>available<#A3E635>."
+        stopping: "<prefix> <#F59E0B>Server <hover:show_text:'<notifications.hover.server>'><#F8FAFC><server></hover> <#F59E0B>is now <#F8FAFC>stopping<#F59E0B>."
+        stopped: "<prefix> <#DC2626>Server <hover:show_text:'<notifications.hover.server>'><#F8FAFC><server></hover> <#DC2626>is now <#F8FAFC>stopped<#DC2626>."
+    group:
+        created: "<prefix> <#0EA5E9>Group <hover:show_text:'<notifications.hover.group>'><#F8FAFC><group></hover> <#0EA5E9>was created."
+        deleted: "<prefix> <#DC2626>Group <hover:show_text:'<notifications.hover.group>'><#F8FAFC><group></hover> <#DC2626>was deleted."
 ```
 
 ## Contributing

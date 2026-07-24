@@ -1,17 +1,15 @@
 plugins {
     kotlin("kapt")
     alias(libs.plugins.minotaur)
+    alias(libs.plugins.blossom)
 }
 
 dependencies {
     api(project(":notify-shared"))
-
     compileOnly(libs.velocity.api)
     kapt(libs.velocity.api)
-
     implementation(libs.cloud.velocity)
 }
-
 
 modrinth {
     token.set(project.findProperty("modrinthToken") as String? ?: System.getenv("MODRINTH_TOKEN"))
@@ -47,4 +45,14 @@ modrinth {
     loaders.add("velocity")
     changelog.set("https://docs.simplecloud.app/changelog")
     syncBodyFrom.set(rootProject.file("README.md").readText())
+}
+
+sourceSets {
+    main {
+        blossom {
+            kotlinSources {
+                property("version", project.version.toString())
+            }
+        }
+    }
 }

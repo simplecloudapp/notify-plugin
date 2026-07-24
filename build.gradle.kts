@@ -1,16 +1,17 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.shadow)
 }
 
-val baseVersion = "0.0.6"
+val baseVersion = "0.0.7"
 val commitHash = System.getenv("COMMIT_HASH")
 val snapshotversion = "${baseVersion}-dev.$commitHash"
 
 allprojects {
-    group = "app.simplecloud.plugin.proxy"
+    group = "app.simplecloud.plugin"
     version = if (commitHash != null) snapshotversion else baseVersion
 
     repositories {
@@ -22,8 +23,10 @@ allprojects {
 }
 
 subprojects {
-    apply(plugin = "org.jetbrains.kotlin.jvm")
-    apply(plugin = "com.gradleup.shadow")
+    apply {
+        plugin("kotlin")
+        plugin("com.gradleup.shadow")
+    }
 
     repositories {
         mavenCentral()
@@ -31,31 +34,41 @@ subprojects {
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://oss.sonatype.org/content/repositories/snapshots")
         maven("https://repo.simplecloud.app/snapshots")
-        }
+    }
 
     dependencies {
         testImplementation(rootProject.libs.kotlin.test)
         implementation(rootProject.libs.kotlinx.coroutines.core)
-        implementation(rootProject.libs.kotlin.jvm)
-    }
-
-    java {
-        toolchain.languageVersion.set(JavaLanguageVersion.of(21))
     }
 
     kotlin {
-        jvmToolchain(21)
+        jvmToolchain(25)
         compilerOptions {
-            apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+            jvmTarget = JvmTarget.JVM_25
+            languageVersion = KotlinVersion.KOTLIN_2_4
+            apiVersion = KotlinVersion.KOTLIN_2_4
         }
     }
 
-    tasks.named("shadowJar", ShadowJar::class) {
-        mergeServiceFiles()
-        archiveFileName.set("${project.name}.jar")
+    java {
+        toolchain.languageVersion.set(JavaLanguageVersion.of(25))
     }
 
     tasks.test {
         useJUnitPlatform()
     }
+
+    tasks.shadowJar {
+        mergeServiceFiles()
+        archiveFileName.set("${project.name}.jar")
+    }
+
+    tasks.processResources {
+        filesMatching("plugin.yml") {
+            expand(
+                "version" to project.version
+            )
+        }
+    }
+
 }
