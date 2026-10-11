@@ -77,12 +77,29 @@ command:
         disabled: "<prefix> <#A3E635>Server notifications are now <#F8FAFC>disabled<#A3E635>."
         already-enabled: "<prefix> <#F59E0B>Server notifications are already <#F8FAFC>enabled<#F59E0B>."
         already-disabled: "<prefix> <#F59E0B>Server notifications are already <#F8FAFC>disabled<#F59E0B>."
+        type:
+            enabled: "<prefix> <#F8FAFC><type> <#A3E635>notifications are now <#F8FAFC>enabled<#A3E635>."
+            disabled: "<prefix> <#F8FAFC><type> <#A3E635>notifications are now <#F8FAFC>disabled<#A3E635>."
+            already-enabled: "<prefix> <#F8FAFC><type> <#F59E0B>notifications are already <#F8FAFC>enabled<#F59E0B>."
+            already-disabled: "<prefix> <#F8FAFC><type> <#F59E0B>notifications are already <#F8FAFC>disabled<#F59E0B>."
 
     set:
         enabled: "<prefix> <#A3E635>Server notifications are now <#F8FAFC>enabled <#A3E635>for <white><head:<playername>:true> <#F8FAFC><displayname><#A3E635>."
         disabled: "<prefix> <#A3E635>Server notifications are now <#F8FAFC>disabled <#A3E635>for <white><head:<playername>:true> <#F8FAFC><displayname><#A3E635>."
         already-enabled: "<prefix> <#F59E0B>Server notifications are already <#F8FAFC>enabled <#F59E0B>for <white><head:<playername>:true> <#F8FAFC><displayname><#F59E0B>."
         already-disabled: "<prefix> <#F59E0B>Server notifications are already <#F8FAFC>disabled <#F59E0B>for <white><head:<playername>:true> <#F8FAFC><displayname><#F59E0B>."
+        type:
+            enabled: "<prefix> <#F8FAFC><type> <#A3E635>notifications are now <#F8FAFC>enabled <#A3E635>for <white><head:<playername>:true> <#F8FAFC><displayname><#A3E635>."
+            disabled: "<prefix> <#F8FAFC><type> <#A3E635>notifications are now <#F8FAFC>disabled <#A3E635>for <white><head:<playername>:true> <#F8FAFC><displayname><#A3E635>."
+            already-enabled: "<prefix> <#F8FAFC><type> <#F59E0B>notifications are already <#F8FAFC>enabled <#F59E0B>for <white><head:<playername>:true> <#F8FAFC><displayname><#F59E0B>."
+            already-disabled: "<prefix> <#F8FAFC><type> <#F59E0B>notifications are already <#F8FAFC>disabled <#F59E0B>for <white><head:<playername>:true> <#F8FAFC><displayname><#F59E0B>."
+
+    list:
+        title: "<prefix> <#0EA5E9>Your notifications <#475569>(click to toggle)"
+        entry: "<toggle><hover:show_text:'<#94A3B8>Click to toggle'><#475569>» <#E2E8F0><type> <#475569>- <state></hover></toggle>"
+        enabled: "<#A3E635>enabled"
+        disabled: "<#DC2626>disabled"
+        empty: "<prefix> <#F59E0B>There are no notifications available for you."
 
     reload:
         config:
@@ -94,6 +111,7 @@ command:
         player-not-online: "<prefix> <#DC2626>Player <#F8FAFC><playername> <#DC2626>is not online."
         only-players: "<prefix> <#DC2626>This command can only be used by players."
         storage-unavailable: "<prefix> <#DC2626>Notify settings are currently unavailable."
+        unknown-type: "<prefix> <#DC2626>Unknown notification type <#F8FAFC><type><#DC2626>. Use <#F8FAFC>/scnotify list<#DC2626>."
         internal: "<prefix> <#DC2626>An internal error occurred. Try again later."
 
 # ───────────────────────────────────────────────────────────────────────────────
@@ -103,6 +121,16 @@ command:
 # NOTE: If you delete a state entry, the corresponding notification will not be sent.
 # ───────────────────────────────────────────────────────────────────────────────
 notifications:
+    # Display names of the notification types, used in /scnotify list and the toggle messages
+    types:
+        server.starting: "Server starting"
+        server.available: "Server available"
+        server.stopping: "Server stopping"
+        server.stopped: "Server stopped"
+        group.created: "Group created"
+        group.deleted: "Group deleted"
+        persistent-server.created: "Persistent server created"
+        persistent-server.deleted: "Persistent server deleted"
     hover:
         server: |-
             <#E2E8F0>Server information
@@ -113,6 +141,9 @@ notifications:
         group: |-
             <#E2E8F0>Group information
             <br><#94A3B8>Time<#475569>: <#E2E8F0><time>
+        persistent-server: |-
+            <#E2E8F0>Persistent server information
+            <br><#94A3B8>Time<#475569>: <#E2E8F0><time>
     server:
         starting: "<prefix> <#0EA5E9>Server <hover:show_text:'<notifications.hover.server>'><#F8FAFC><server></hover> <#0EA5E9>is now <#F8FAFC>starting<#0EA5E9>."
         available: "<prefix> <#A3E635>Server <hover:show_text:'<notifications.hover.server>'><#F8FAFC><server></hover> <#A3E635>is now <#F8FAFC>available<#A3E635>."
@@ -121,6 +152,9 @@ notifications:
     group:
         created: "<prefix> <#0EA5E9>Group <hover:show_text:'<notifications.hover.group>'><#F8FAFC><group></hover> <#0EA5E9>was created."
         deleted: "<prefix> <#DC2626>Group <hover:show_text:'<notifications.hover.group>'><#F8FAFC><group></hover> <#DC2626>was deleted."
+    persistent-server:
+        created: "<prefix> <#0EA5E9>Persistent server <hover:show_text:'<notifications.hover.persistent-server>'><#F8FAFC><server></hover> <#0EA5E9>was created."
+        deleted: "<prefix> <#DC2626>Persistent server <hover:show_text:'<notifications.hover.persistent-server>'><#F8FAFC><server></hover> <#DC2626>was deleted."
 ```
 
 ## Contributing

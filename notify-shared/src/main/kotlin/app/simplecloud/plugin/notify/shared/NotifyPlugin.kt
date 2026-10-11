@@ -4,8 +4,8 @@ import app.simplecloud.api.CloudApi
 import app.simplecloud.plugin.api.shared.config.ConfigurationFactory
 import app.simplecloud.plugin.notify.shared.config.MessageConfig
 import app.simplecloud.plugin.notify.shared.listener.NotificationListener
-import app.simplecloud.plugin.notify.shared.notification.NotificationRenderer
-import app.simplecloud.plugin.notify.shared.notification.NotificationSettings
+import app.simplecloud.plugin.notify.shared.utilities.MessageFormatter
+import app.simplecloud.plugin.notify.shared.notification.NotificationCache
 import app.simplecloud.plugin.notify.shared.platform.NotifyPlatform
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
@@ -20,9 +20,9 @@ class NotifyPlugin(private val platform: NotifyPlatform) {
     val api = CloudApi.create()
     val messages = createMessages()
 
-    val renderer = NotificationRenderer(messages)
-    val settings = NotificationSettings(api.player())
-    private val listener = NotificationListener(api, messages, platform, renderer, settings)
+    val formatter = MessageFormatter(messages)
+    val cache = NotificationCache(api.player())
+    private val listener = NotificationListener(api, messages, platform, formatter, cache)
 
     fun startup() {
         listener.start()
@@ -30,18 +30,18 @@ class NotifyPlugin(private val platform: NotifyPlatform) {
 
     fun shutdown() {
         listener.stop()
-        settings.clear()
+        cache.clear()
         scope.cancel()
     }
 
     fun onPlayerJoin(id: UUID) {
         scope.launch {
-            settings.load(id)
+            cache.load(id)
         }
     }
 
     fun onPlayerQuit(id: UUID) {
-        settings.unload(id)
+        cache.unload(id)
     }
 
     fun reload(): Boolean {

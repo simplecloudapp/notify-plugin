@@ -6,11 +6,11 @@ import app.simplecloud.api.server.ServerState
 import app.simplecloud.plugin.api.shared.config.ConfigurationFactory
 import app.simplecloud.plugin.notify.shared.command.CloudSender
 import app.simplecloud.plugin.notify.shared.config.MessageConfig
+import app.simplecloud.plugin.notify.shared.utilities.MessageFormatter
 import app.simplecloud.plugin.notify.shared.notification.Notification
-import app.simplecloud.plugin.notify.shared.notification.NotificationRenderer
-import app.simplecloud.plugin.notify.shared.notification.NotificationSettings
+import app.simplecloud.plugin.notify.shared.notification.NotificationCache
+import app.simplecloud.plugin.notify.shared.notification.NotificationType
 import app.simplecloud.plugin.notify.shared.platform.NotifyPlatform
-import app.simplecloud.plugin.notify.shared.utilities.NotifyPermissions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,8 +24,8 @@ class NotificationListener(
     private val api: CloudApi,
     private val messages: ConfigurationFactory<MessageConfig>,
     private val platform: NotifyPlatform,
-    private val renderer: NotificationRenderer,
-    private val settings: NotificationSettings
+    private val formatter: MessageFormatter,
+    private val cache: NotificationCache
 ) {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -43,13 +43,14 @@ class NotificationListener(
                 val state = event.newState
 
                 scope.launch {
+                    val type = NotificationType.fromServerState(state) ?: return@launch
                     val message = messages.get().notifications.server?.getByState(state) ?: return@launch
                     if (lastSentState.put(server.serverId, state) == state) return@launch
 
                     broadcast(
                         Notification(
-                            renderer.server(server, message, Placeholder.unparsed("state", state.name)),
-                            setOf(NotifyPermissions.serverStatePermission(state))
+                            formatter.server(server, message, Placeholder.unparsed("state", state.name)),
+                            type
                         )
                     )
                 }
@@ -65,8 +66,8 @@ class NotificationListener(
                     val message = messages.get().notifications.server?.stopped ?: return@launch
                     broadcast(
                         Notification(
-                            renderer.server(server, message, Placeholder.unparsed("state", "STOPPED")),
-                            NotifyPermissions.SERVER_STOPPED_ALIASES
+                            formatter.server(server, message, Placeholder.unparsed("state", "STOPPED")),
+                            NotificationType.SERVER_STOPPED
                         )
                     )
                 }
@@ -84,8 +85,8 @@ class NotificationListener(
 
                     broadcast(
                         Notification(
-                            renderer.group(message, name),
-                            NotifyPermissions.GROUP_CREATED
+                            formatter.group(message, name),
+                            NotificationType.GROUP_CREATED
                         )
                     )
                 }
@@ -100,8 +101,8 @@ class NotificationListener(
                     val message = messages.get().notifications.group?.deleted ?: return@launch
                     broadcast(
                         Notification(
-                            renderer.group(message, name),
-                            NotifyPermissions.GROUP_DELETED
+                            formatter.group(message, name),
+                            NotificationType.GROUP_DELETED
                         )
                     )
                 }
@@ -116,8 +117,8 @@ class NotificationListener(
                     val message = messages.get().notifications.persistentServer?.created ?: return@launch
                     broadcast(
                         Notification(
-                            renderer.persistentServer(message, name),
-                            NotifyPermissions.PERSISTENT_SERVER_CREATED
+                            formatter.persistentServer(message, name),
+                            NotificationType.PERSISTENT_SERVER_CREATED
                         )
                     )
                 }
@@ -132,8 +133,8 @@ class NotificationListener(
                     val message = messages.get().notifications.persistentServer?.deleted ?: return@launch
                     broadcast(
                         Notification(
-                            renderer.persistentServer(message, name),
-                            NotifyPermissions.PERSISTENT_SERVER_DELETED
+                            formatter.persistentServer(message, name),
+                            NotificationType.PERSISTENT_SERVER_DELETED
                         )
                     )
                 }
@@ -150,13 +151,13 @@ class NotificationListener(
 
     private fun broadcast(notification: Notification) {
         platform.getOnlinePlayers()
-            .filter(::isEnabled)
+            .filter { sender -> isEnabled(sender, notification.type) }
             .forEach(notification::sendTo)
     }
 
-    private fun isEnabled(sender: CloudSender): Boolean {
+    private fun isEnabled(sender: CloudSender, type: NotificationType): Boolean {
         val id = sender.getUniqueId() ?: return true
-        return settings.isEnabled(id)
+        return cache.isEnabled(id, type)
     }
 
 }

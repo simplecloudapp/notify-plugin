@@ -36,11 +36,8 @@ class BungeeCordNotifyPlugin : Plugin() {
     private fun registerCommands(notify: NotifyPlugin) {
         val manager = BungeeCommandManager(
             this,
-            ExecutionCoordinator.simpleCoordinator(),
-            SenderMapper.create(
-                { source -> BungeeCloudSender(source, adventure) },
-                BungeeCloudSender::source
-            )
+            ExecutionCoordinator.asyncCoordinator(),
+            SenderMapper.create({ source -> BungeeCloudSender(source, adventure) }, BungeeCloudSender::source)
         )
 
         NotifyCommand(manager, notify).register()

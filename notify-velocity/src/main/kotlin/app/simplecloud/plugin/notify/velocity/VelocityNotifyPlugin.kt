@@ -57,7 +57,7 @@ class VelocityNotifyPlugin @Inject constructor(
         val manager = VelocityCommandManager(
             server.pluginManager.ensurePluginContainer(this),
             server,
-            ExecutionCoordinator.simpleCoordinator(),
+            ExecutionCoordinator.asyncCoordinator(),
             SenderMapper.create(::VelocityCloudSender, VelocityCloudSender::source)
         )
 

@@ -1,5 +1,5 @@
 dependencies {
-    api(libs.cloud.core)
+    api(libs.bundles.cloud)
     api(libs.simplecloud.plugin)
     api(libs.bundles.configurate)
     compileOnly(libs.simplecloud.api)

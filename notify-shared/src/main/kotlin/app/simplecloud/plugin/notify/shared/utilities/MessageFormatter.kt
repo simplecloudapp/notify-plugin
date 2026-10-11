@@ -1,4 +1,4 @@
-package app.simplecloud.plugin.notify.shared.notification
+package app.simplecloud.plugin.notify.shared.utilities
 
 import app.simplecloud.api.server.Server
 import app.simplecloud.plugin.api.shared.config.ConfigurationFactory
@@ -12,7 +12,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
-class NotificationRenderer(
+class MessageFormatter(
     private val messages: ConfigurationFactory<MessageConfig>,
 ) {
 
@@ -22,7 +22,7 @@ class NotificationRenderer(
 
     private val zone: ZoneId = ZoneId.systemDefault()
 
-    private val formatter: DateTimeFormatter
+    private val dateFormatter: DateTimeFormatter
         get() = DateTimeFormatter.ofPattern(messages.get().format.date, Locale.getDefault()).withZone(zone)
 
     fun server(server: Server, message: String, vararg tagResolver: TagResolver): Component {
@@ -88,7 +88,7 @@ class NotificationRenderer(
             else -> null
         } ?: return "N/A"
 
-        return formatter.format(instant)
+        return dateFormatter.format(instant)
     }
 
 }
