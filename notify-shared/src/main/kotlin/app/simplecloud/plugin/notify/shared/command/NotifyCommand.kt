@@ -1,27 +1,26 @@
 package app.simplecloud.plugin.notify.shared.command
 
 import app.simplecloud.api.player.CloudPlayer
-import app.simplecloud.api.player.PlayerApi
 import app.simplecloud.plugin.notify.shared.NotifyPlugin
-import app.simplecloud.plugin.notify.shared.config.MessageConfig
-import app.simplecloud.plugin.notify.shared.notification.NotificationRenderer
-import app.simplecloud.plugin.notify.shared.notification.NotificationSettings
 import app.simplecloud.plugin.notify.shared.utilities.NotifyPermissions
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.launch
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
 import org.incendo.cloud.CommandManager
 import org.incendo.cloud.parser.standard.BooleanParser
 import org.incendo.cloud.parser.standard.StringParser
+import org.slf4j.LoggerFactory
+import java.util.UUID
 
 class NotifyCommand<C : CloudSender>(
     private val manager: CommandManager<C>,
-    private val notify: NotifyPlugin,
-    private val renderer: NotificationRenderer,
-    private val settings: NotificationSettings,
-    private val api: PlayerApi,
+    private val notify: NotifyPlugin
 ) {
 
-    private val config: MessageConfig
-        get() = notify.config.get()
+    private val logger = LoggerFactory.getLogger(NotifyCommand::class.java)
+    private val messages get() = notify.messages.get()
+    private val renderer = notify.renderer
+    private val settings = notify.settings
 
     private val commands = linkedMapOf(
         "/scnotify help" to NotifyPermissions.COMMAND_HELP,
@@ -38,32 +37,9 @@ class NotifyCommand<C : CloudSender>(
     }
 
     private fun registerHelp() {
-        manager.command(
-            manager.commandBuilder("scnotify")
-                .permission(NotifyPermissions.COMMAND_HELP)
-                .handler { context -> sendHelp(context.sender()) }
-        )
-
-        manager.command(
-            manager.commandBuilder("scnotify")
-                .literal("help")
-                .permission(NotifyPermissions.COMMAND_HELP)
-                .handler { context -> sendHelp(context.sender()) }
-        )
-    }
-
-    private fun sendHelp(sender: C) {
-        val usable = commands.filterValues { sender.hasPermission(it) }.keys
-
-        if (usable.isEmpty()) {
-            sender.sendMessage(renderer.message(config.command.help.empty))
-            return
-        }
-
-        sender.sendMessage(renderer.message(config.command.help.title))
-        usable.forEach { usage ->
-            sender.sendMessage(renderer.message(config.command.help.entry, Placeholder.unparsed("command", usage)))
-        }
+        val root = manager.commandBuilder("scnotify").permission(NotifyPermissions.COMMAND_HELP)
+        manager.command(root.handler { context -> sendHelp(context.sender()) })
+        manager.command(root.literal("help").handler { context -> sendHelp(context.sender()) })
     }
 
     private fun registerReload() {
@@ -72,56 +48,16 @@ class NotifyCommand<C : CloudSender>(
                 .literal("reload").literal("config")
                 .permission(NotifyPermissions.COMMAND_RELOAD_CONFIG)
                 .handler { context ->
-                    val sender = context.sender()
-
-                    if (notify.reload()) {
-                        sender.sendMessage(renderer.message(config.command.reload.config.success))
-                    } else {
-                        sender.sendMessage(renderer.message(config.command.reload.config.failed))
-                    }
+                    val message = if (notify.reload()) messages.command.reload.config.success else messages.command.reload.config.failed
+                    context.sender().sendMessage(renderer.message(message))
                 }
         )
     }
 
     private fun registerToggleSelf() {
-        manager.command(
-            manager.commandBuilder("scnotify")
-                .literal("enable")
-                .permission(NotifyPermissions.COMMAND_TOGGLE_SELF)
-                .handler { context -> toggleSelf(context.sender(), true) }
-        )
-
-        manager.command(
-            manager.commandBuilder("scnotify")
-                .literal("disable")
-                .permission(NotifyPermissions.COMMAND_TOGGLE_SELF)
-                .handler { context -> toggleSelf(context.sender(), false) }
-        )
-    }
-
-    private fun toggleSelf(sender: C, value: Boolean) {
-        val id = sender.uniqueId
-
-        if (id == null) {
-            sender.sendMessage(renderer.message(config.command.error.onlyPlayers))
-            return
-        }
-
-        val messages = config.command.notify
-
-        if (settings.isEnabled(id) == value) {
-            sender.sendMessage(renderer.message(if (value) messages.alreadyEnabled else messages.alreadyDisabled))
-            return
-        }
-
-        settings.set(id, value).whenComplete { _, error ->
-            if (error != null) {
-                sender.sendMessage(renderer.message(config.command.error.storageUnavailable))
-                return@whenComplete
-            }
-
-            sender.sendMessage(renderer.message(if (value) messages.enabled else messages.disabled))
-        }
+        val root = manager.commandBuilder("scnotify").permission(NotifyPermissions.COMMAND_TOGGLE_SELF)
+        manager.command(root.literal("enable").handler { context -> toggleSelf(context.sender(), true) })
+        manager.command(root.literal("disable").handler { context -> toggleSelf(context.sender(), false) })
     }
 
     private fun registerToggleOther() {
@@ -136,48 +72,93 @@ class NotifyCommand<C : CloudSender>(
                     val player = context.get<String>("player")
                     val value = context.get<Boolean>("value")
 
-                    api.get(player).whenComplete { target, error ->
-                        if (error != null) {
-                            sender.sendMessage(renderer.message(config.command.error.storageUnavailable))
-                            return@whenComplete
-                        }
-
-                        if (target == null) {
-                            sender.sendMessage(playerError(config.command.error.playerNotFound, player))
-                            return@whenComplete
-                        }
-
-                        if (!target.isOnline) {
-                            sender.sendMessage(playerError(config.command.error.playerNotOnline, player))
-                            return@whenComplete
-                        }
-
-                        applyToTarget(sender, target, value)
+                    notify.scope.launch {
+                        toggleOther(sender, player, value)
                     }
                 }
         )
     }
 
-    private fun applyToTarget(sender: C, target: CloudPlayer, value: Boolean) {
-        if (settings.isEnabled(target.uniqueId) == value) {
-            sender.sendMessage(targetMessage(if (value) config.command.set.alreadyEnabled else config.command.set.alreadyDisabled, target))
+    private fun sendHelp(sender: C) {
+        val usable = commands.filterValues { permission -> sender.hasPermission(permission) }.keys
+
+        if (usable.isEmpty()) {
+            sender.sendMessage(renderer.message(messages.command.help.empty))
             return
         }
 
-        settings.set(target.uniqueId, value).whenComplete { _, error ->
-            if (error != null) {
-                sender.sendMessage(renderer.message(config.command.error.storageUnavailable))
-                return@whenComplete
-            }
+        sender.sendMessage(renderer.message(messages.command.help.title))
+        usable.forEach { usage ->
+            sender.sendMessage(renderer.message(messages.command.help.entry, Placeholder.unparsed("command", usage)))
+        }
+    }
 
-            sender.sendMessage(targetMessage(if (value) config.command.set.enabled else config.command.set.disabled, target))
-            target.sendMessage(renderer.message(if (value) config.command.notify.enabled else config.command.notify.disabled))
+    private fun toggleSelf(sender: C, value: Boolean) {
+        val id = sender.getUniqueId()
+
+        if (id == null) {
+            sender.sendMessage(renderer.message(messages.command.error.onlyPlayers))
+            return
+        }
+
+        val notifyMessages = messages.command.notify
+
+        if (settings.isEnabled(id) == value) {
+            sender.sendMessage(renderer.message(if (value) notifyMessages.alreadyEnabled else notifyMessages.alreadyDisabled))
+            return
+        }
+
+        notify.scope.launch {
+            if (!updateSetting(sender, id, value)) return@launch
+            sender.sendMessage(renderer.message(if (value) notifyMessages.enabled else notifyMessages.disabled))
+        }
+    }
+
+    private suspend fun toggleOther(sender: C, playerName: String, value: Boolean) {
+        val target = try {
+            notify.api.player().get(playerName).await()
+        } catch (e: Exception) {
+            logger.error("Failed to load player '$playerName'", e)
+            sender.sendMessage(renderer.message(messages.command.error.storageUnavailable))
+            return
+        }
+
+        if (target == null) {
+            sender.sendMessage(playerError(messages.command.error.playerNotFound, playerName))
+            return
+        }
+
+        if (!target.isOnline) {
+            sender.sendMessage(playerError(messages.command.error.playerNotOnline, playerName))
+            return
+        }
+
+        val setMessages = messages.command.set
+
+        if (settings.isEnabled(target.uniqueId) == value) {
+            sender.sendMessage(targetMessage(if (value) setMessages.alreadyEnabled else setMessages.alreadyDisabled, target))
+            return
+        }
+
+        if (!updateSetting(sender, target.uniqueId, value)) return
+
+        sender.sendMessage(targetMessage(if (value) setMessages.enabled else setMessages.disabled, target))
+        target.sendMessage(renderer.message(if (value) messages.command.notify.enabled else messages.command.notify.disabled))
+    }
+
+    private suspend fun updateSetting(sender: C, id: UUID, value: Boolean): Boolean {
+        try {
+            settings.set(id, value)
+            return true
+        } catch (e: Exception) {
+            logger.error("Failed to update the notify setting of '$id'", e)
+            sender.sendMessage(renderer.message(messages.command.error.storageUnavailable))
+            return false
         }
     }
 
     private fun targetMessage(message: String, target: CloudPlayer) = renderer.message(
         message,
-        // Must stay parsed: <playername> is consumed as an argument of the <head:...> tag.
         Placeholder.parsed("playername", target.name),
         Placeholder.unparsed("displayname", target.displayName ?: target.name)
     )

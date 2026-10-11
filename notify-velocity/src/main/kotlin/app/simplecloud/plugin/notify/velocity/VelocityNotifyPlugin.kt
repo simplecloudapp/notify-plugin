@@ -1,9 +1,10 @@
 package app.simplecloud.plugin.notify.velocity
 
 import app.simplecloud.plugin.notify.shared.NotifyPlugin
-import app.simplecloud.plugin.notify.shared.command.CloudSender
+import app.simplecloud.plugin.notify.shared.command.NotifyCommand
 import app.simplecloud.plugin.notify.velocity.command.VelocityCloudSender
 import app.simplecloud.plugin.notify.velocity.listener.NotifyConnectionListener
+import app.simplecloud.plugin.notify.velocity.platform.VelocityPlatformImpl
 import com.google.inject.Inject
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
@@ -33,35 +34,34 @@ class VelocityNotifyPlugin @Inject constructor(
     private val server: ProxyServer,
 ) {
 
-    private var notifyPlugin: NotifyPlugin? = null
+    private var notify: NotifyPlugin? = null
 
     @Subscribe
     fun onProxyInitialize(event: ProxyInitializeEvent) {
-        val notify = NotifyPlugin(dataDirectory, ::onlinePlayers)
-        notify.start()
-        notify.registerCommands(createCommandManager())
+        val notify = NotifyPlugin(VelocityPlatformImpl(dataDirectory, server))
+        this.notify = notify
 
-        notifyPlugin = notify
+        notify.startup()
+
         server.eventManager.register(this, NotifyConnectionListener(notify))
+
+        registerCommands(notify)
     }
 
     @Subscribe
     fun onProxyShutdown(event: ProxyShutdownEvent) {
-        notifyPlugin?.close()
-        notifyPlugin = null
+        notify?.shutdown()
     }
 
-    private fun createCommandManager(): VelocityCommandManager<VelocityCloudSender> {
-        return VelocityCommandManager(
+    private fun registerCommands(notify: NotifyPlugin) {
+        val manager = VelocityCommandManager(
             server.pluginManager.ensurePluginContainer(this),
             server,
             ExecutionCoordinator.simpleCoordinator(),
             SenderMapper.create(::VelocityCloudSender, VelocityCloudSender::source)
         )
-    }
 
-    private fun onlinePlayers(): Iterable<CloudSender> {
-        return server.allPlayers.map(::VelocityCloudSender)
+        NotifyCommand(manager, notify).register()
     }
 
 }

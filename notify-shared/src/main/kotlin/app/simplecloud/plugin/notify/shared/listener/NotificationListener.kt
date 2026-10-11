@@ -3,21 +3,27 @@ package app.simplecloud.plugin.notify.shared.listener
 import app.simplecloud.api.CloudApi
 import app.simplecloud.api.event.Subscription
 import app.simplecloud.api.server.ServerState
+import app.simplecloud.plugin.api.shared.config.ConfigurationFactory
 import app.simplecloud.plugin.notify.shared.command.CloudSender
-import app.simplecloud.plugin.notify.shared.notification.Notification
 import app.simplecloud.plugin.notify.shared.config.MessageConfig
+import app.simplecloud.plugin.notify.shared.notification.Notification
 import app.simplecloud.plugin.notify.shared.notification.NotificationRenderer
 import app.simplecloud.plugin.notify.shared.notification.NotificationSettings
+import app.simplecloud.plugin.notify.shared.platform.NotifyPlatform
 import app.simplecloud.plugin.notify.shared.utilities.NotifyPermissions
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.launch
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
 import java.util.concurrent.ConcurrentHashMap
 
 class NotificationListener(
     private val api: CloudApi,
-    private val config: () -> MessageConfig,
-    private val recipients: () -> Iterable<CloudSender>,
+    private val messages: ConfigurationFactory<MessageConfig>,
+    private val platform: NotifyPlatform,
     private val renderer: NotificationRenderer,
     private val settings: NotificationSettings
 ) {
@@ -37,7 +43,7 @@ class NotificationListener(
                 val state = event.newState
 
                 scope.launch {
-                    val message = config().notifications.server?.getByState(state) ?: return@launch
+                    val message = messages.get().notifications.server?.getByState(state) ?: return@launch
                     if (lastSentState.put(server.serverId, state) == state) return@launch
 
                     broadcast(
@@ -56,7 +62,7 @@ class NotificationListener(
                 lastSentState.remove(server.serverId)
 
                 scope.launch {
-                    val message = config().notifications.server?.stopped ?: return@launch
+                    val message = messages.get().notifications.server?.stopped ?: return@launch
                     broadcast(
                         Notification(
                             renderer.server(server, message, Placeholder.unparsed("state", "STOPPED")),
@@ -72,7 +78,7 @@ class NotificationListener(
                 val serverGroupId = event.serverGroupId
 
                 scope.launch {
-                    val message = config().notifications.group?.created ?: return@launch
+                    val message = messages.get().notifications.group?.created ?: return@launch
                     val name = runCatching { api.group().getGroupById(serverGroupId).await() }
                         .getOrNull()?.name ?: serverGroupId
 
@@ -91,7 +97,7 @@ class NotificationListener(
                 val name = event.name
 
                 scope.launch {
-                    val message = config().notifications.group?.deleted ?: return@launch
+                    val message = messages.get().notifications.group?.deleted ?: return@launch
                     broadcast(
                         Notification(
                             renderer.group(message, name),
@@ -104,16 +110,21 @@ class NotificationListener(
     }
 
     fun stop() {
-        subscriptions.forEach { it.close() }
+        subscriptions.forEach { subscription -> subscription.close() }
         subscriptions.clear()
         lastSentState.clear()
         scope.cancel()
     }
 
     private fun broadcast(notification: Notification) {
-        recipients()
-            .filter { sender -> sender.uniqueId?.let(settings::isEnabled) ?: true }
+        platform.getOnlinePlayers()
+            .filter(::isEnabled)
             .forEach(notification::sendTo)
+    }
+
+    private fun isEnabled(sender: CloudSender): Boolean {
+        val id = sender.getUniqueId() ?: return true
+        return settings.isEnabled(id)
     }
 
 }

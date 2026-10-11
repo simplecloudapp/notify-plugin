@@ -3,7 +3,6 @@ package app.simplecloud.plugin.notify.shared.notification
 import app.simplecloud.api.player.PlayerApi
 import kotlinx.coroutines.future.await
 import java.util.UUID
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
 class NotificationSettings(
@@ -26,9 +25,9 @@ class NotificationSettings(
         return cache[id] ?: true
     }
 
-    fun set(id: UUID, value: Boolean): CompletableFuture<*> {
+    suspend fun set(id: UUID, value: Boolean) {
         cache[id] = value
-        return api.updatePlayerProperty(id, property, value.toString())
+        api.updatePlayerProperty(id, property, value.toString()).await()
     }
 
     fun clear() {

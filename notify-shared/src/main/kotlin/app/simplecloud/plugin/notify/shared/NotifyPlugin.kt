@@ -2,43 +2,36 @@ package app.simplecloud.plugin.notify.shared
 
 import app.simplecloud.api.CloudApi
 import app.simplecloud.plugin.api.shared.config.ConfigurationFactory
-import app.simplecloud.plugin.notify.shared.command.CloudSender
-import app.simplecloud.plugin.notify.shared.command.NotifyCommand
 import app.simplecloud.plugin.notify.shared.config.MessageConfig
 import app.simplecloud.plugin.notify.shared.listener.NotificationListener
 import app.simplecloud.plugin.notify.shared.notification.NotificationRenderer
 import app.simplecloud.plugin.notify.shared.notification.NotificationSettings
+import app.simplecloud.plugin.notify.shared.platform.NotifyPlatform
 import kotlinx.coroutines.*
-import org.incendo.cloud.CommandManager
-import java.nio.file.Path
+import org.slf4j.LoggerFactory
+import java.io.File
 import java.util.UUID
 
-class NotifyPlugin(
-    dataDirectory: Path,
-    recipients: () -> Iterable<CloudSender>,
-) {
+class NotifyPlugin(private val platform: NotifyPlatform) {
 
-    val config = ConfigurationFactory(dataDirectory.resolve("messages.yml").toFile(), MessageConfig::class.java)
+    private val logger = LoggerFactory.getLogger(NotifyPlugin::class.java)
 
-    private val api = CloudApi.create()
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val renderer = NotificationRenderer(config::get)
-    private val settings = NotificationSettings(api.player())
-    private val listener = NotificationListener(api, config::get, recipients, renderer, settings)
+    val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    val api = CloudApi.create()
+    val messages = createMessages()
 
-    fun start() {
-        config.loadOrCreate(MessageConfig())
+    val renderer = NotificationRenderer(messages)
+    val settings = NotificationSettings(api.player())
+    private val listener = NotificationListener(api, messages, platform, renderer, settings)
+
+    fun startup() {
         listener.start()
     }
 
-    fun close() {
+    fun shutdown() {
         listener.stop()
         settings.clear()
         scope.cancel()
-    }
-
-    fun <C : CloudSender> registerCommands(manager: CommandManager<C>) {
-        NotifyCommand(manager, this, renderer, settings, api.player()).register()
     }
 
     fun onPlayerJoin(id: UUID) {
@@ -52,7 +45,22 @@ class NotifyPlugin(
     }
 
     fun reload(): Boolean {
-        return runCatching { config.reload() }.isSuccess
+        return runCatching {
+            logger.info("Reloading simplecloud notify...")
+            messages.reload()
+        }.onSuccess {
+            logger.info("Successfully reloaded simplecloud notify")
+        }.onFailure { throwable ->
+            logger.error("Failed to reload simplecloud notify", throwable)
+        }.isSuccess
+    }
+
+    private fun createMessages(): ConfigurationFactory<MessageConfig> {
+        val file = File(platform.getDataDirectory(), "messages.yml")
+
+        val factory = ConfigurationFactory(file, MessageConfig::class.java)
+        factory.loadOrCreate(MessageConfig())
+        return factory
     }
 
 }

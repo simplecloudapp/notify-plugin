@@ -12,11 +12,9 @@ class BungeeCloudSender(
     private val adventure: BungeeAudiences,
 ) : CloudSender {
 
-    override val uniqueId: UUID?
-        get() = (source as? ProxiedPlayer)?.uniqueId
-
-    override val name: String
-        get() = source.name
+    override fun getUniqueId(): UUID? {
+        return (source as? ProxiedPlayer)?.uniqueId
+    }
 
     override fun sendMessage(message: Component) {
         adventure.sender(source).sendMessage(message)

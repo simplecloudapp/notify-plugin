@@ -1,12 +1,12 @@
 [versions]
-kotlin = "2.4.10"
+kotlin = "2.4.21"
 kotlinx-coroutines = "1.11.0"
 
-shadow = "9.5.1"
-minotaur = "2.9.0"
+shadow = "9.6.1"
+minotaur = "2.10.0"
 blossom = "2.2.0"
 
-simplecloud-api = "0.1.0-platform.40"
+simplecloud-api = "0.1.0-platform.58-dev.5.1-fe01ce5"
 simplecloud-plugin = "0.0.1-platform.1778966459069-b1e45e2"
 
 velocity = "4.1.0-SNAPSHOT"
@@ -17,9 +17,10 @@ adventure-platform-bungeecord = "4.4.1"
 
 configurate = "4.2.0"
 
-cloud-core = "2.0.0"
-cloud-velocity = "2.0.0-beta.10"
-cloud-bungeecord = "2.0.0-beta.10"
+cloud-core = "2.1.0"
+cloud-platform = "2.0.1"
+
+slf4j = "2.0.20"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -39,8 +40,10 @@ configurate-yaml = { module = "org.spongepowered:configurate-yaml", version.ref 
 configurate-kotlin = { module = "org.spongepowered:configurate-extra-kotlin", version.ref = "configurate" }
 
 cloud-core = { module = "org.incendo:cloud-core", version.ref = "cloud-core" }
-cloud-velocity = { module = "org.incendo:cloud-velocity", version.ref = "cloud-velocity" }
-cloud-bungeecord = { module = "org.incendo:cloud-bungee", version.ref = "cloud-bungeecord" }
+cloud-velocity = { module = "org.incendo:cloud-velocity", version.ref = "cloud-platform" }
+cloud-bungeecord = { module = "org.incendo:cloud-bungee", version.ref = "cloud-platform" }
+
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 
 [bundles]
 configurate = ["configurate-kotlin", "configurate-yaml"]
