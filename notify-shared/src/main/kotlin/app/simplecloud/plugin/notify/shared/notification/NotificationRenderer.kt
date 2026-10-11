@@ -18,6 +18,7 @@ class NotificationRenderer(
 
     private val serverHoverPlaceholder = "notifications.hover.server"
     private val groupHoverPlaceholder = "notifications.hover.group"
+    private val persistentServerHoverPlaceholder = "notifications.hover.persistent-server"
 
     private val zone: ZoneId = ZoneId.systemDefault()
 
@@ -46,6 +47,14 @@ class NotificationRenderer(
         return parse(
             replaceHover(message, groupHoverPlaceholder, messages.get().notifications.hover.group),
             Placeholder.unparsed("group", groupName ?: "N/A"),
+            Placeholder.unparsed("time", formatTimestamp(Instant.now()))
+        )
+    }
+
+    fun persistentServer(message: String, serverName: String?): Component {
+        return parse(
+            replaceHover(message, persistentServerHoverPlaceholder, messages.get().notifications.hover.persistentServer),
+            Placeholder.unparsed("server", serverName ?: "N/A"),
             Placeholder.unparsed("time", formatTimestamp(Instant.now()))
         )
     }

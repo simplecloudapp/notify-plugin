@@ -107,6 +107,38 @@ class NotificationListener(
                 }
             }
         )
+
+        subscriptions.add(
+            api.event().persistentServer().onCreated { event ->
+                val name = event.name ?: event.persistentServerId
+
+                scope.launch {
+                    val message = messages.get().notifications.persistentServer?.created ?: return@launch
+                    broadcast(
+                        Notification(
+                            renderer.persistentServer(message, name),
+                            NotifyPermissions.PERSISTENT_SERVER_CREATED
+                        )
+                    )
+                }
+            }
+        )
+
+        subscriptions.add(
+            api.event().persistentServer().onDeleted { event ->
+                val name = event.name ?: event.persistentServerId
+
+                scope.launch {
+                    val message = messages.get().notifications.persistentServer?.deleted ?: return@launch
+                    broadcast(
+                        Notification(
+                            renderer.persistentServer(message, name),
+                            NotifyPermissions.PERSISTENT_SERVER_DELETED
+                        )
+                    )
+                }
+            }
+        )
     }
 
     fun stop() {

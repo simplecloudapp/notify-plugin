@@ -92,7 +92,8 @@ data class Error(
 data class Notifications(
     val hover: Hover = Hover(),
     val server: ServerNotifications? = ServerNotifications(),
-    val group: GroupNotifications? = GroupNotifications()
+    val group: GroupNotifications? = GroupNotifications(),
+    val persistentServer: PersistentServerNotifications? = PersistentServerNotifications()
 )
 
 @ConfigSerializable
@@ -107,6 +108,11 @@ data class Hover(
 
     val group: String = """
         <#E2E8F0>Group information
+        <br><#94A3B8>Time<#475569>: <#E2E8F0><time>
+    """.trimIndent(),
+
+    val persistentServer: String = """
+        <#E2E8F0>Persistent server information
         <br><#94A3B8>Time<#475569>: <#E2E8F0><time>
     """.trimIndent()
 )
@@ -132,4 +138,10 @@ data class ServerNotifications(
 data class GroupNotifications(
     val created: String? = "<prefix> <#0EA5E9>Group <hover:show_text:'<notifications.hover.group>'><#F8FAFC><group></hover> <#0EA5E9>was created.",
     val deleted: String? = "<prefix> <#DC2626>Group <hover:show_text:'<notifications.hover.group>'><#F8FAFC><group></hover> <#DC2626>was deleted."
+)
+
+@ConfigSerializable
+data class PersistentServerNotifications(
+    val created: String? = "<prefix> <#0EA5E9>Persistent server <hover:show_text:'<notifications.hover.persistent-server>'><#F8FAFC><server></hover> <#0EA5E9>was created.",
+    val deleted: String? = "<prefix> <#DC2626>Persistent server <hover:show_text:'<notifications.hover.persistent-server>'><#F8FAFC><server></hover> <#DC2626>was deleted."
 )
