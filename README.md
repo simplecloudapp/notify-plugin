@@ -31,6 +31,8 @@ Keep your staff informed about server state changes with real-time notifications
 
 - [x] **Ingame Notifiction**: Get chat messages about server changes
 - [x] **Customize Messages**: Configurable messages ([minimessage](https://docs.papermc.io/adventure/minimessage/) supported)
+- [x] **Server, group & persistent server events**: Notifications for starting, available, stopping, stopped, created and deleted
+- [x] **Per-type toggles**: Players can enable or disable each notification type
 - [x] **Velocity & BungeeCord support**
 
 ## Contributing
@@ -46,8 +48,8 @@ This repository is licensed under [Apache 2.0][license].
 [banner]: https://raw.githubusercontent.com/simplecloudapp/branding/refs/heads/main/readme/banner/plugin/notify.png
 [issue-bug-report]: https://github.com/simplecloudapp/notify-plugin/issues/new?labels=bug&projects=template=01_BUG-REPORT.yml&title=%5BBUG%5D+%3Ctitle%3E
 [issue-feature-request]: https://github.com/simplecloudapp/notify-plugin/discussions/new?category=ideas
-[docs-thisproject]: https://docs.simplecloud.app/en/manual/plugin/notify
-[docs-contribute]: https://docs.simplecloud.app/contribute
+[docs-thisproject]: https://simplecloud.app/docs/en/manual/plugin/notify
+[docs-contribute]: https://simplecloud.app/docs/contribute
 
 [modrinth]: https://modrinth.com/plugin/notify-plugin
 [maven-central]: https://central.sonatype.com/artifact/app.simplecloud.controller/controller-api
