@@ -2,6 +2,7 @@ package app.simplecloud.plugin.notify.shared
 
 import app.simplecloud.api.CloudApi
 import app.simplecloud.plugin.api.shared.config.ConfigurationFactory
+import app.simplecloud.plugin.notify.shared.config.DefaultConfigInstaller
 import app.simplecloud.plugin.notify.shared.config.MessageConfig
 import app.simplecloud.plugin.notify.shared.listener.NotificationListener
 import app.simplecloud.plugin.notify.shared.utilities.MessageFormatter
@@ -57,6 +58,7 @@ class NotifyPlugin(private val platform: NotifyPlatform) {
 
     private fun createMessages(): ConfigurationFactory<MessageConfig> {
         val file = File(platform.getDataDirectory(), "messages.yml")
+        DefaultConfigInstaller.install(file.toPath(), javaClass.classLoader)
 
         val factory = ConfigurationFactory(file, MessageConfig::class.java)
         factory.loadOrCreate(MessageConfig())
