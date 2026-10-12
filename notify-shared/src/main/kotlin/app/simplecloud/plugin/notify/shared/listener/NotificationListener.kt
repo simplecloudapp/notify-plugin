@@ -11,12 +11,8 @@ import app.simplecloud.plugin.notify.shared.notification.Notification
 import app.simplecloud.plugin.notify.shared.notification.NotificationCache
 import app.simplecloud.plugin.notify.shared.notification.NotificationType
 import app.simplecloud.plugin.notify.shared.platform.NotifyPlatform
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.*
 import kotlinx.coroutines.future.await
-import kotlinx.coroutines.launch
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
 import java.util.concurrent.ConcurrentHashMap
 
@@ -28,7 +24,7 @@ class NotificationListener(
     private val cache: NotificationCache
 ) {
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.IO.limitedParallelism(1) + SupervisorJob())
     private val subscriptions: MutableList<Subscription> = mutableListOf()
     private val lastSentState: MutableMap<String, ServerState> = ConcurrentHashMap()
 
@@ -60,9 +56,9 @@ class NotificationListener(
         subscriptions.add(
             api.event().server().onStopped { event ->
                 val server = event.server
-                lastSentState.remove(server.serverId)
 
                 scope.launch {
+                    lastSentState.remove(server.serverId)
                     val message = messages.get().notifications.server?.stopped ?: return@launch
                     broadcast(
                         Notification(

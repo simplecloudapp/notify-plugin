@@ -172,7 +172,7 @@ class NotifyCommand<C : CloudSender>(
             return
         }
 
-        val types = typesOf(type)
+        val types = typesOf(type).filter { receivable -> receivable.canReceive(sender) }
         val disabled = fetchDisabledTypes(sender, id) ?: return
 
         if (isAlreadySet(types, disabled, value)) {

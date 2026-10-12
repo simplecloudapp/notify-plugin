@@ -30,7 +30,7 @@ import java.nio.file.Path
     ]
 )
 class VelocityNotifyPlugin @Inject constructor(
-    @param:DataDirectory private val dataDirectory: Path,
+    @DataDirectory private val dataDirectory: Path,
     private val server: ProxyServer,
 ) {
 
