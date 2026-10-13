@@ -3,12 +3,14 @@ package app.simplecloud.plugin.notify.shared.listener
 import app.simplecloud.api.CloudApi
 import app.simplecloud.api.event.Subscription
 import app.simplecloud.api.server.ServerState
+import app.simplecloud.plugin.api.shared.config.ConfigurationFactory
 import app.simplecloud.plugin.notify.shared.command.CloudSender
-import app.simplecloud.plugin.notify.shared.notification.Notification
 import app.simplecloud.plugin.notify.shared.config.MessageConfig
-import app.simplecloud.plugin.notify.shared.notification.NotificationRenderer
-import app.simplecloud.plugin.notify.shared.notification.NotificationSettings
-import app.simplecloud.plugin.notify.shared.utilities.NotifyPermissions
+import app.simplecloud.plugin.notify.shared.utilities.MessageFormatter
+import app.simplecloud.plugin.notify.shared.notification.Notification
+import app.simplecloud.plugin.notify.shared.notification.NotificationCache
+import app.simplecloud.plugin.notify.shared.notification.NotificationType
+import app.simplecloud.plugin.notify.shared.platform.NotifyPlatform
 import kotlinx.coroutines.*
 import kotlinx.coroutines.future.await
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
@@ -16,13 +18,13 @@ import java.util.concurrent.ConcurrentHashMap
 
 class NotificationListener(
     private val api: CloudApi,
-    private val config: () -> MessageConfig,
-    private val recipients: () -> Iterable<CloudSender>,
-    private val renderer: NotificationRenderer,
-    private val settings: NotificationSettings
+    private val messages: ConfigurationFactory<MessageConfig>,
+    private val platform: NotifyPlatform,
+    private val formatter: MessageFormatter,
+    private val cache: NotificationCache
 ) {
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.IO.limitedParallelism(1) + SupervisorJob())
     private val subscriptions: MutableList<Subscription> = mutableListOf()
     private val lastSentState: MutableMap<String, ServerState> = ConcurrentHashMap()
 
@@ -37,13 +39,14 @@ class NotificationListener(
                 val state = event.newState
 
                 scope.launch {
-                    val message = config().notifications.server?.getByState(state) ?: return@launch
+                    val type = NotificationType.fromServerState(state) ?: return@launch
+                    val message = messages.get().notifications.server?.getByState(state) ?: return@launch
                     if (lastSentState.put(server.serverId, state) == state) return@launch
 
                     broadcast(
                         Notification(
-                            renderer.server(server, message, Placeholder.unparsed("state", state.name)),
-                            setOf(NotifyPermissions.serverStatePermission(state))
+                            formatter.server(server, message, Placeholder.unparsed("state", state.name)),
+                            type
                         )
                     )
                 }
@@ -53,14 +56,14 @@ class NotificationListener(
         subscriptions.add(
             api.event().server().onStopped { event ->
                 val server = event.server
-                lastSentState.remove(server.serverId)
 
                 scope.launch {
-                    val message = config().notifications.server?.stopped ?: return@launch
+                    lastSentState.remove(server.serverId)
+                    val message = messages.get().notifications.server?.stopped ?: return@launch
                     broadcast(
                         Notification(
-                            renderer.server(server, message, Placeholder.unparsed("state", "STOPPED")),
-                            NotifyPermissions.SERVER_STOPPED_ALIASES
+                            formatter.server(server, message, Placeholder.unparsed("state", "STOPPED")),
+                            NotificationType.SERVER_STOPPED
                         )
                     )
                 }
@@ -72,14 +75,14 @@ class NotificationListener(
                 val serverGroupId = event.serverGroupId
 
                 scope.launch {
-                    val message = config().notifications.group?.created ?: return@launch
+                    val message = messages.get().notifications.group?.created ?: return@launch
                     val name = runCatching { api.group().getGroupById(serverGroupId).await() }
                         .getOrNull()?.name ?: serverGroupId
 
                     broadcast(
                         Notification(
-                            renderer.group(message, name),
-                            NotifyPermissions.GROUP_CREATED
+                            formatter.group(message, name),
+                            NotificationType.GROUP_CREATED
                         )
                     )
                 }
@@ -91,11 +94,43 @@ class NotificationListener(
                 val name = event.name
 
                 scope.launch {
-                    val message = config().notifications.group?.deleted ?: return@launch
+                    val message = messages.get().notifications.group?.deleted ?: return@launch
                     broadcast(
                         Notification(
-                            renderer.group(message, name),
-                            NotifyPermissions.GROUP_DELETED
+                            formatter.group(message, name),
+                            NotificationType.GROUP_DELETED
+                        )
+                    )
+                }
+            }
+        )
+
+        subscriptions.add(
+            api.event().persistentServer().onCreated { event ->
+                val name = event.name ?: event.persistentServerId
+
+                scope.launch {
+                    val message = messages.get().notifications.persistentServer?.created ?: return@launch
+                    broadcast(
+                        Notification(
+                            formatter.persistentServer(message, name),
+                            NotificationType.PERSISTENT_SERVER_CREATED
+                        )
+                    )
+                }
+            }
+        )
+
+        subscriptions.add(
+            api.event().persistentServer().onDeleted { event ->
+                val name = event.name ?: event.persistentServerId
+
+                scope.launch {
+                    val message = messages.get().notifications.persistentServer?.deleted ?: return@launch
+                    broadcast(
+                        Notification(
+                            formatter.persistentServer(message, name),
+                            NotificationType.PERSISTENT_SERVER_DELETED
                         )
                     )
                 }
@@ -104,16 +139,21 @@ class NotificationListener(
     }
 
     fun stop() {
-        subscriptions.forEach { it.close() }
+        subscriptions.forEach { subscription -> subscription.close() }
         subscriptions.clear()
         lastSentState.clear()
         scope.cancel()
     }
 
     private fun broadcast(notification: Notification) {
-        recipients()
-            .filter { sender -> sender.uniqueId?.let(settings::isEnabled) ?: true }
+        platform.getOnlinePlayers()
+            .filter { sender -> isEnabled(sender, notification.type) }
             .forEach(notification::sendTo)
+    }
+
+    private fun isEnabled(sender: CloudSender, type: NotificationType): Boolean {
+        val id = sender.getUniqueId() ?: return true
+        return cache.isEnabled(id, type)
     }
 
 }

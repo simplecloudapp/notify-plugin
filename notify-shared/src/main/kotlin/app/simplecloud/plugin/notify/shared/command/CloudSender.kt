@@ -5,9 +5,7 @@ import java.util.UUID
 
 interface CloudSender {
 
-    val uniqueId: UUID?
-
-    val name: String
+    fun getUniqueId(): UUID?
 
     fun sendMessage(message: Component)
 

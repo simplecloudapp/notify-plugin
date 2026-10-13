@@ -10,11 +10,9 @@ class VelocityCloudSender(
     val source: CommandSource,
 ) : CloudSender {
 
-    override val uniqueId: UUID?
-        get() = (source as? Player)?.uniqueId
-
-    override val name: String
-        get() = (source as? Player)?.username ?: "CONSOLE"
+    override fun getUniqueId(): UUID? {
+        return (source as? Player)?.uniqueId
+    }
 
     override fun sendMessage(message: Component) {
         source.sendMessage(message)

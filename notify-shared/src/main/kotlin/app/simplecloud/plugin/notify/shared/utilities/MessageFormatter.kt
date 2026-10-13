@@ -1,6 +1,7 @@
-package app.simplecloud.plugin.notify.shared.notification
+package app.simplecloud.plugin.notify.shared.utilities
 
 import app.simplecloud.api.server.Server
+import app.simplecloud.plugin.api.shared.config.ConfigurationFactory
 import app.simplecloud.plugin.notify.shared.config.MessageConfig
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
@@ -11,27 +12,28 @@ import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
-class NotificationRenderer(
-    private val config: () -> MessageConfig,
+class MessageFormatter(
+    private val messages: ConfigurationFactory<MessageConfig>,
 ) {
 
     private val serverHoverPlaceholder = "notifications.hover.server"
     private val groupHoverPlaceholder = "notifications.hover.group"
+    private val persistentServerHoverPlaceholder = "notifications.hover.persistent-server"
 
     private val zone: ZoneId = ZoneId.systemDefault()
 
-    private val formatter: DateTimeFormatter
-        get() = DateTimeFormatter.ofPattern(config().format.date, Locale.getDefault()).withZone(zone)
+    private val dateFormatter: DateTimeFormatter
+        get() = DateTimeFormatter.ofPattern(messages.get().format.date, Locale.getDefault()).withZone(zone)
 
     fun server(server: Server, message: String, vararg tagResolver: TagResolver): Component {
         return parse(
-            replaceHover(message, serverHoverPlaceholder, config().notifications.hover.server),
+            replaceHover(message, serverHoverPlaceholder, messages.get().notifications.hover.server),
             Placeholder.unparsed("ip", server.ip ?: "N/A"),
             Placeholder.unparsed("port", server.port.toString()),
             Placeholder.unparsed("group", server.serverBase.name ?: "N/A"),
             Placeholder.unparsed("server", server.serverBase.name ?: "N/A"),
             Placeholder.unparsed("uuid", server.serverId),
-            Placeholder.unparsed("id", server.numericalId.takeIf { it != -1 }?.let { " $it" } ?: ""),
+            Placeholder.unparsed("id", formatNumericalId(server.numericalId)),
             Placeholder.unparsed("create_date", formatTimestamp(runCatching { server.createdAt }.getOrNull())),
             Placeholder.unparsed("time", formatTimestamp(Instant.now())),
             Placeholder.unparsed("updated", formatTimestamp(runCatching { server.updatedAt }.getOrNull())),
@@ -43,8 +45,16 @@ class NotificationRenderer(
 
     fun group(message: String, groupName: String?): Component {
         return parse(
-            replaceHover(message, groupHoverPlaceholder, config().notifications.hover.group),
+            replaceHover(message, groupHoverPlaceholder, messages.get().notifications.hover.group),
             Placeholder.unparsed("group", groupName ?: "N/A"),
+            Placeholder.unparsed("time", formatTimestamp(Instant.now()))
+        )
+    }
+
+    fun persistentServer(message: String, serverName: String?): Component {
+        return parse(
+            replaceHover(message, persistentServerHoverPlaceholder, messages.get().notifications.hover.persistentServer),
+            Placeholder.unparsed("server", serverName ?: "N/A"),
             Placeholder.unparsed("time", formatTimestamp(Instant.now()))
         )
     }
@@ -54,7 +64,7 @@ class NotificationRenderer(
     }
 
     private fun parse(message: String, vararg tagResolver: TagResolver): Component {
-        return config().msg(message, *tagResolver)
+        return messages.get().msg(message, *tagResolver)
     }
 
     private fun replaceHover(message: String, placeholder: String, hoverMessage: String): String {
@@ -64,9 +74,12 @@ class NotificationRenderer(
         )
     }
 
-    private fun formatTimestamp(value: Any?): String {
-        if (value == null) return "N/A"
+    private fun formatNumericalId(id: Int): String {
+        if (id == -1) return ""
+        return " $id"
+    }
 
+    private fun formatTimestamp(value: Any?): String {
         val instant = when (value) {
             is Instant -> value
             is Date -> value.toInstant()
@@ -75,7 +88,7 @@ class NotificationRenderer(
             else -> null
         } ?: return "N/A"
 
-        return formatter.format(instant)
+        return dateFormatter.format(instant)
     }
 
 }

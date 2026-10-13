@@ -6,18 +6,15 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-val baseVersion = "0.0.8"
-val commitHash = System.getenv("COMMIT_HASH")
-val snapshotversion = "${baseVersion}-dev.$commitHash"
-
 allprojects {
     group = "app.simplecloud.plugin"
-    version = if (commitHash != null) snapshotversion else baseVersion
+    version = "1.0.0"
 
     repositories {
         mavenCentral()
         maven("https://buf.build/gen/maven")
         maven("https://repo.simplecloud.app/snapshots")
+        maven("https://oss.sonatype.org/content/repositories/snapshots")
         maven("https://repo.papermc.io/repository/maven-public/")
     }
 }
@@ -28,17 +25,11 @@ subprojects {
         plugin("com.gradleup.shadow")
     }
 
-    repositories {
-        mavenCentral()
-        maven("https://buf.build/gen/maven")
-        maven("https://repo.papermc.io/repository/maven-public/")
-        maven("https://oss.sonatype.org/content/repositories/snapshots")
-        maven("https://repo.simplecloud.app/snapshots")
-    }
-
     dependencies {
         testImplementation(rootProject.libs.kotlin.test)
         implementation(rootProject.libs.kotlinx.coroutines.core)
+
+        compileOnly(rootProject.libs.slf4j.api)
     }
 
     kotlin {
