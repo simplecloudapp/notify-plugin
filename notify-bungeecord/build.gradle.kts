@@ -5,7 +5,6 @@ plugins {
 dependencies {
     api(project(":notify-shared"))
     compileOnly(libs.bungeecord.api)
-    implementation(libs.adventure.platform.bungeecord)
     implementation(libs.adventure.api)
     implementation(libs.adventure.text.minimessage)
     implementation(libs.cloud.bungeecord)
