@@ -1,6 +1,7 @@
 package app.simplecloud.plugin.notify.shared.command
 
 import app.simplecloud.api.player.CloudPlayer
+import app.simplecloud.plugin.api.shared.command.CloudSender
 import app.simplecloud.plugin.notify.shared.NotifyPlugin
 import app.simplecloud.plugin.notify.shared.notification.NotificationType
 import app.simplecloud.plugin.notify.shared.utilities.NotifyPermissions

@@ -9,6 +9,7 @@ dependencies {
     implementation(libs.adventure.api)
     implementation(libs.adventure.text.minimessage)
     implementation(libs.cloud.bungeecord)
+    implementation(libs.simplecloud.plugin.bungeecord)
 }
 
 modrinth {

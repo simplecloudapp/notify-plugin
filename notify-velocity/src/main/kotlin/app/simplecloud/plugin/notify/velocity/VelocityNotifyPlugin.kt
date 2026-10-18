@@ -1,8 +1,8 @@
 package app.simplecloud.plugin.notify.velocity
 
+import app.simplecloud.plugin.api.velocity.command.VelocityCloudSenderMapper
 import app.simplecloud.plugin.notify.shared.NotifyPlugin
 import app.simplecloud.plugin.notify.shared.command.NotifyCommand
-import app.simplecloud.plugin.notify.velocity.command.VelocityCloudSender
 import app.simplecloud.plugin.notify.velocity.listener.NotifyConnectionListener
 import app.simplecloud.plugin.notify.velocity.platform.VelocityPlatformImpl
 import com.google.inject.Inject
@@ -13,7 +13,6 @@ import com.velocitypowered.api.plugin.Dependency
 import com.velocitypowered.api.plugin.Plugin
 import com.velocitypowered.api.plugin.annotation.DataDirectory
 import com.velocitypowered.api.proxy.ProxyServer
-import org.incendo.cloud.SenderMapper
 import org.incendo.cloud.execution.ExecutionCoordinator
 import org.incendo.cloud.velocity.VelocityCommandManager
 import java.nio.file.Path
@@ -58,7 +57,7 @@ class VelocityNotifyPlugin @Inject constructor(
             server.pluginManager.ensurePluginContainer(this),
             server,
             ExecutionCoordinator.asyncCoordinator(),
-            SenderMapper.create(::VelocityCloudSender, VelocityCloudSender::source)
+            VelocityCloudSenderMapper
         )
 
         NotifyCommand(manager, notify).register()
