@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> **Moved:** Notify now lives in [simplecloud-plugins](https://github.com/simplecloudapp/simplecloud-plugins/tree/main/proxy/notify). This repository is archived.
+
 # Notify Plugin
 
 ![Banner][banner]
